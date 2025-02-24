@@ -28,7 +28,7 @@ impl MigrationTrait for Migration {
                     .col(string(Users::Name))
                     .col(string(Users::Email))
                     .col(string(Users::Password))
-                    .col(enumeration_null(Users::Role, RoleEnum, Role::iter()))
+                    .col(enumeration(Users::Role, RoleEnum, Role::iter()).default("Users"))
                     .col(timestamp(Users::CreatedAt).default(Expr::current_timestamp()))
                     .col(timestamp(Users::UpdatedAt).default(Expr::current_timestamp()))
                     .col(boolean(Users::IsDeleted).default(false))
@@ -40,6 +40,10 @@ impl MigrationTrait for Migration {
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
             .drop_table(Table::drop().table(Users::Table).to_owned())
+            .await?;
+
+        manager
+            .drop_type(Type::drop().name(RoleEnum).to_owned())
             .await
     }
 }

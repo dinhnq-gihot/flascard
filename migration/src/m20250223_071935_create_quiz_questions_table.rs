@@ -20,7 +20,7 @@ impl MigrationTrait for Migration {
                     .col(uuid(QuizQuestions::QuizId))
                     .col(uuid(QuizQuestions::QuestionId))
                     .col(text(QuizQuestions::QuestionContent))
-                    .col(enumeration_null(
+                    .col(enumeration(
                         QuizQuestions::Type,
                         QuestionTypeEnum,
                         QuestionType::iter(),

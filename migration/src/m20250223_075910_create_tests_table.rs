@@ -18,8 +18,8 @@ impl MigrationTrait for Migration {
                     .col(pk_uuid(Tests::Id))
                     .col(uuid(Tests::QuizId))
                     .col(uuid(Tests::UserId))
-                    .col(integer(Tests::Score))
-                    .col(boolean(Tests::Submitted))
+                    .col(integer(Tests::Score).default(0))
+                    .col(boolean(Tests::Submitted).default(false))
                     .col(timestamp(Tests::StartedAt))
                     .col(timestamp(Tests::SubmittedAt))
                     .col(unsigned(Tests::Duration)) // Duration in seconds

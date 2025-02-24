@@ -29,11 +29,10 @@ impl MigrationTrait for Migration {
                     .col(uuid(SharedSets::SetId))
                     .col(uuid(SharedSets::UserId))
                     .col(timestamp(SharedSets::SharedAt).default(Expr::current_timestamp()))
-                    .col(enumeration(
-                        SharedSets::Permission,
-                        PermissionEnum,
-                        Permission::iter(),
-                    ))
+                    .col(
+                        enumeration(SharedSets::Permission, PermissionEnum, Permission::iter())
+                            .default("View"),
+                    )
                     .primary_key(
                         Index::create()
                             .name("pk_user_set")
@@ -62,6 +61,10 @@ impl MigrationTrait for Migration {
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
             .drop_table(Table::drop().table(SharedSets::Table).to_owned())
+            .await?;
+
+        manager
+            .drop_type(Type::drop().name(PermissionEnum).to_owned())
             .await
     }
 }

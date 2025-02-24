@@ -28,7 +28,7 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(pk_uuid(Questions::Id))
                     .col(string(Questions::Content))
-                    .col(enumeration_null(
+                    .col(enumeration(
                         Questions::Type,
                         QuestionTypeEnum,
                         QuestionType::iter(),
@@ -60,6 +60,10 @@ impl MigrationTrait for Migration {
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
             .drop_table(Table::drop().table(Questions::Table).to_owned())
+            .await?;
+
+        manager
+            .drop_type(Type::drop().name(QuestionTypeEnum).to_owned())
             .await
     }
 }

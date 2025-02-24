@@ -16,7 +16,7 @@ impl MigrationTrait for Migration {
                     .col(pk_uuid(Sets::Id))
                     // Add these new columns and foreign key
                     .col(uuid(Sets::OwnerId))
-                    .col(string(Sets::Description))
+                    .col(string_null(Sets::Description))
                     .col(boolean(Sets::PublicOrNot).default(false))
                     .col(timestamp(Sets::CreatedAt).default(Expr::current_timestamp()))
                     .col(timestamp(Sets::UpdatedAt).default(Expr::current_timestamp()))
