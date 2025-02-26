@@ -1,6 +1,7 @@
-use std::time::Duration;
-
-use sea_orm::{ConnectOptions, Database as DB, DatabaseConnection, DbErr};
+use {
+    sea_orm::{ConnectOptions, Database as DB, DatabaseConnection, DbErr},
+    std::time::Duration,
+};
 
 pub struct Database {
     db: DatabaseConnection,
