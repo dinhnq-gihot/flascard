@@ -13,7 +13,7 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(Answers::Table)
                     .if_not_exists()
-                    .col(pk_uuid(Answers::Id))
+                    .col(pk_uuid(Answers::Id).default(Expr::cust("uuid_generate_v4()")))
                     .col(text(Answers::Content)) // Changed from string() to text()
                     .col(boolean(Answers::IsCorrect))
                     .col(uuid(Answers::QuestionId)) // Changed to use uuid() directly

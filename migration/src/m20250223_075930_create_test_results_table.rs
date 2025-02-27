@@ -1,8 +1,9 @@
-use sea_orm_migration::{prelude::*, schema::*};
-
-use crate::{
-    m20250223_071935_create_quiz_questions_table::QuizQuestions,
-    m20250223_075910_create_tests_table::Tests,
+use {
+    crate::{
+        m20250223_071935_create_quiz_questions_table::QuizQuestions,
+        m20250223_075910_create_tests_table::Tests,
+    },
+    sea_orm_migration::{prelude::*, schema::*},
 };
 
 #[derive(DeriveMigrationName)]
@@ -16,7 +17,7 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(TestResults::Table)
                     .if_not_exists()
-                    .col(pk_auto(TestResults::Id))
+                    .col(pk_uuid(TestResults::Id).default(Expr::cust("uuid_generate_v4()")))
                     .col(uuid(TestResults::TestId))
                     .col(uuid(TestResults::QuizQuestionId))
                     .col(text_null(TestResults::Result)) // Changed to text type

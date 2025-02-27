@@ -13,7 +13,7 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(TestStates::Table)
                     .if_not_exists()
-                    .col(pk_auto(TestStates::Id))
+                    .col(pk_uuid(TestStates::Id).default(Expr::cust("uuid_generate_v4()")))
                     .col(uuid(TestStates::TestId))
                     .col(unsigned(TestStates::CurrentQuizQuestion))
                     .col(unsigned(TestStates::RemainingTime))

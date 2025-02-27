@@ -13,7 +13,7 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(Sets::Table)
                     .if_not_exists()
-                    .col(pk_uuid(Sets::Id))
+                    .col(pk_uuid(Sets::Id).default(Expr::cust("uuid_generate_v4()")))
                     // Add these new columns and foreign key
                     .col(uuid(Sets::OwnerId))
                     .col(string_null(Sets::Description))

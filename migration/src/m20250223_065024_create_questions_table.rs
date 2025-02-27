@@ -26,7 +26,7 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(Questions::Table)
                     .if_not_exists()
-                    .col(pk_uuid(Questions::Id))
+                    .col(pk_uuid(Questions::Id).default(Expr::cust("uuid_generate_v4()")))
                     .col(string(Questions::Content))
                     .col(enumeration(
                         Questions::Type,

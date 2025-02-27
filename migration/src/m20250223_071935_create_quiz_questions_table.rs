@@ -16,7 +16,7 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(QuizQuestions::Table)
                     .if_not_exists()
-                    .col(pk_uuid(QuizQuestions::Id))
+                    .col(pk_uuid(QuizQuestions::Id).default(Expr::cust("uuid_generate_v4()")))
                     .col(uuid(QuizQuestions::QuizId))
                     .col(uuid(QuizQuestions::QuestionId))
                     .col(text(QuizQuestions::QuestionContent))

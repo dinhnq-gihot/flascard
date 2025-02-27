@@ -1,7 +1,7 @@
 use sea_orm_migration::{
     prelude::{extension::postgres::Type, *},
     schema::*,
-    sea_orm::{EnumIter, Iterable},
+    sea_orm::{DbBackend, EnumIter, Iterable, Statement},
 };
 
 #[derive(DeriveMigrationName)]
@@ -20,15 +20,23 @@ impl MigrationTrait for Migration {
             .await?;
 
         manager
+            .get_connection()
+            .execute(Statement::from_string(
+                DbBackend::Postgres,
+                "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"".to_string(),
+            ))
+            .await?;
+
+        manager
             .create_table(
                 Table::create()
                     .table(Users::Table)
                     .if_not_exists()
-                    .col(pk_uuid(Users::Id))
+                    .col(pk_uuid(Users::Id).default(Expr::cust("uuid_generate_v4()")))
                     .col(string(Users::Name))
-                    .col(string(Users::Email))
+                    .col(string_uniq(Users::Email))
                     .col(string(Users::Password))
-                    .col(enumeration(Users::Role, RoleEnum, Role::iter()).default("Users"))
+                    .col(enumeration(Users::Role, RoleEnum, Role::iter()).default("User"))
                     .col(timestamp(Users::CreatedAt).default(Expr::current_timestamp()))
                     .col(timestamp(Users::UpdatedAt).default(Expr::current_timestamp()))
                     .col(boolean(Users::IsDeleted).default(false))
@@ -69,6 +77,6 @@ struct RoleEnum;
 pub enum Role {
     #[iden = "Staff"]
     Staff,
-    #[iden = "Users"]
-    Users,
+    #[iden = "User"]
+    User,
 }

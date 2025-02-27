@@ -1,6 +1,11 @@
-use {axum::response::IntoResponse, sea_orm::DbErr, thiserror::Error};
+use {
+    super::generic::{DataResponse, GenericResponse},
+    axum::{http::StatusCode, response::IntoResponse, Json},
+    sea_orm::DbErr,
+    thiserror::Error,
+};
 
-pub type DbResult<T> = Result<T, DbErr>;
+pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -32,5 +37,22 @@ pub enum Error {
 }
 
 impl IntoResponse for Error {
-    fn into_response(self) -> axum::response::Response {}
+    fn into_response(self) -> axum::response::Response {
+        let status = match &self {
+            Error::RecordNotFound => StatusCode::NOT_FOUND,
+            Error::UserAlreadyExists => StatusCode::CONFLICT,
+            Error::AccessDenied(_) => StatusCode::FORBIDDEN,
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
+        };
+
+        let body = GenericResponse {
+            status,
+            result: DataResponse::<String> {
+                msg: self.to_string(),
+                data: None,
+            },
+        };
+
+        (status, Json(body)).into_response()
+    }
 }

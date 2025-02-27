@@ -13,7 +13,7 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(Quizes::Table)
                     .if_not_exists()
-                    .col(pk_uuid(Quizes::Id))
+                    .col(pk_uuid(Quizes::Id).default(Expr::cust("uuid_generate_v4()")))
                     .col(uuid(Quizes::SetId))
                     .col(uuid(Quizes::CreatorId))
                     .col(boolean(Quizes::PublicOrNot).default(false))
