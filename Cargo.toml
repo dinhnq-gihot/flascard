@@ -31,3 +31,18 @@ tracing-appender = "0.2.3"
 
 # utils
 uuid = { version = "1.15.1", features = ["v4"] }
+bcrypt = "0.17.0"
+
+# middlewares
+jsonwebtoken = "9.3.1"
+
+# macro
+quote = "1.0.37" # For generating Rust code
+syn = { version = "2.0.91", features = [
+    "full",
+    "fold",
+] } # For parsing Rust code
+# proc-macro2 = "1.0.92" # Required by `quote` and `syn`
+
+[lib]
+proc-macro = true

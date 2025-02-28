@@ -9,6 +9,8 @@ pub mod models;
 pub mod routes;
 pub mod server;
 pub mod services;
+pub mod middleware;
+pub mod utils;
 
 #[tokio::main]
 async fn main() -> Result<()> {

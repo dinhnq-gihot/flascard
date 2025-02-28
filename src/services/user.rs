@@ -4,7 +4,7 @@ use {
         entities::{prelude::*, sea_orm_active_enums::RoleEnum, users},
         enums::error::{Error, Result},
     },
-    sea_orm::{ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, Set},
+    sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, Set},
     std::sync::Arc,
     uuid::Uuid,
 };
@@ -59,16 +59,67 @@ impl UserService {
     ) -> Result<users::Model> {
         let conn = self.db.get_connection().await;
 
+        let mut user: users::ActiveModel = Users::find_by_id(id)
+            .filter(users::Column::IsDeleted.eq(false))
+            .one(&conn)
+            .await
+            .map_err(Error::QueryFailed)?
+            .ok_or(Error::RecordNotFound)?
+            .into();
+
         if let Some(email) = email {
             let existed_email_count = Users::find()
-                .filter(users::Column::Email.eq(email))
+                .filter(users::Column::Email.eq(&email))
+                .filter(users::Column::IsDeleted.eq(false))
                 .count(&conn)
                 .await
                 .map_err(Error::QueryFailed)?;
             if existed_email_count > 0 {
                 return Err(Error::UserAlreadyExists);
+            } else {
+                user.email = Set(email);
             }
         }
+        if let Some(name) = name {
+            user.name = Set(name);
+        }
+        if let Some(password) = password {
+            user.password = Set(password);
+        }
+        if let Some(role) = role {
+            user.role = Set(role);
+        }
+        user.updated_at = Set(chrono::Utc::now().naive_utc());
+
+        user.update(&conn).await.map_err(Error::UpdateFailed)
+    }
+
+    pub async fn get_by_email(
+        &self,
+        email: String,
+    ) -> Result<Option<users::Model>> {
+        let conn = self.db.get_connection().await;
+        let user = Users::find()
+            .filter(users::Column::Email.eq(email))
+            .filter(users::Column::IsDeleted.eq(false))
+            .one(&conn)
+            .await
+            .map_err(Error::QueryFailed)?;
+
+        Ok(user)
+    }
+
+    pub async fn delete_user(&self, id: Uuid) -> Result<()> {
+        let conn = self.db.get_connection().await;
+        let mut user: users::ActiveModel = Users::find_by_id(id)
+            .filter(users::Column::IsDeleted.eq(false))
+            .one(&conn)
+            .await
+            .map_err(Error::QueryFailed)?
+            .ok_or(Error::RecordNotFound)?
+            .into();
+        user.is_deleted = Set(true);
+        user.update(&conn).await.map_err(Error::DeleteFailed)?;
 
         Ok(())
     }

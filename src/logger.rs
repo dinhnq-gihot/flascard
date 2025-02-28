@@ -6,7 +6,7 @@ use {
 #[macro_export]
 macro_rules! warn {
     ($fmt:expr) => {{
-        $tracing::warn!(
+        tracing::warn!(
             file=file!(),
             line=line!(),
             column=column!(),
@@ -16,7 +16,7 @@ macro_rules! warn {
 
     ($fmt:expr, $($args:tt)*) => {
         {
-            $crate::tracing::warn!(
+            tracing::warn!(
                 file=file!(),
                 line=line!(),
                 column=column!(),
@@ -39,7 +39,7 @@ macro_rules! panic {
     }};
     ($fmt:expr, $($args:tt)*) => {
         {
-            $crate::tracing::error!(
+            tracing::error!(
                 file=file!(),
                 line=line!(),
                 column=column!(),
@@ -53,7 +53,7 @@ macro_rules! panic {
 #[macro_export]
 macro_rules! error {
     ($fmt:expr) => {{
-        $crate::tracing::error!(
+        tracing::error!(
             file=file!(),
             line=line!(),
             column=column!(),
@@ -62,7 +62,7 @@ macro_rules! error {
     }};
     ($fmt:expr, $($args:tt)*) => {
         {
-            $crate::tracing::error!(
+            tracing::error!(
                 file=file!(),
                 line=line!(),
                 column=column!(),

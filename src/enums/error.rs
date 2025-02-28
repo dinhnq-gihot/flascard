@@ -26,14 +26,40 @@ pub enum Error {
     DeleteFailed(#[source] DbErr),
     #[error("User already exists")]
     UserAlreadyExists,
+    #[error("Login failed")]
+    LoginFailed,
+
+    // File errors
+    #[error("Create file failed")]
+    CreateFileFailed,
+    #[error("File type invalid")]
+    FileTypeInvalid,
+    #[error("Field not found: {0}")]
+    FieldNotFound(String),
+
+    // Auth errors
+    #[error("Please login first")]
+    TokenNotFound,
+    #[error("Hash password failed")]
+    HashingFailed,
+    #[error("Verify password failed")]
+    VerifyPasswordFailed,
+    #[error("Invalid credentials")]
+    InvalidCredentials,
+
+    // JWT errors
+    #[error("JWT decode failed: {0}")]
+    DecodeJwtFailed(#[source] jsonwebtoken::errors::Error),
+    #[error("JWT encode failed: {0}")]
+    EncodeJwtFailed(#[source] jsonwebtoken::errors::Error),
 
     // anyhow error
     #[error(transparent)]
     Anyhow(#[from] anyhow::Error),
 
     // Access denied
-    #[error("Access denied: {0} role required")]
-    AccessDenied(String),
+    #[error("Access denied")]
+    AccessDenied,
 }
 
 impl IntoResponse for Error {
@@ -41,7 +67,8 @@ impl IntoResponse for Error {
         let status = match &self {
             Error::RecordNotFound => StatusCode::NOT_FOUND,
             Error::UserAlreadyExists => StatusCode::CONFLICT,
-            Error::AccessDenied(_) => StatusCode::FORBIDDEN,
+            Error::AccessDenied => StatusCode::FORBIDDEN,
+            Error::InvalidCredentials => StatusCode::UNAUTHORIZED,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
