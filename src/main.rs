@@ -19,6 +19,7 @@ pub mod routes;
 pub mod server;
 pub mod services;
 pub mod r#static;
+pub mod tests;
 pub mod utils;
 
 #[tokio::main]

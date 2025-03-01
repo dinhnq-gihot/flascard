@@ -1,6 +1,7 @@
-use sea_orm_migration::{prelude::*, schema::*};
-
-use crate::m20250223_061404_create_users_table::Users;
+use {
+    crate::m20250223_061404_create_users_table::Users,
+    sea_orm_migration::{prelude::*, schema::*},
+};
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -15,6 +16,7 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(pk_uuid(Sets::Id).default(Expr::cust("uuid_generate_v4()")))
                     // Add these new columns and foreign key
+                    .col(string(Sets::Name))
                     .col(uuid(Sets::OwnerId))
                     .col(string_null(Sets::Description))
                     .col(boolean(Sets::PublicOrNot).default(false))
@@ -44,6 +46,7 @@ impl MigrationTrait for Migration {
 pub enum Sets {
     Table,
     Id,
+    Name,
     OwnerId,
     Description,
     PublicOrNot,

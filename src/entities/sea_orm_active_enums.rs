@@ -33,4 +33,3 @@ pub enum RoleEnum {
     #[sea_orm(string_value = "User")]
     User,
 }
-

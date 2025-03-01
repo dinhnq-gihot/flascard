@@ -37,6 +37,7 @@ parking_lot = "0.12.3"
 dotenv = "0.15.0"
 toml = "0.8.20"
 clap = { version = "4.5.31", features = ["derive"] }
+validator = { version = "0.20.0", features = ["derive"] }
 
 # middlewares
 jsonwebtoken = "9.3.1"

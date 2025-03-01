@@ -28,6 +28,8 @@ pub enum Error {
     UserAlreadyExists,
     #[error("Login failed")]
     LoginFailed,
+    #[error("Permission Denied: User does not have the required role.")]
+    PermissionDenied,
 
     // File errors
     #[error("Create file failed")]
@@ -71,7 +73,7 @@ impl IntoResponse for Error {
         let status = match &self {
             Error::RecordNotFound => StatusCode::NOT_FOUND,
             Error::UserAlreadyExists => StatusCode::CONFLICT,
-            Error::AccessDenied => StatusCode::FORBIDDEN,
+            Error::AccessDenied | Error::PermissionDenied => StatusCode::FORBIDDEN,
             Error::InvalidCredentials => StatusCode::UNAUTHORIZED,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         };

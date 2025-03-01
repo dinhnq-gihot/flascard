@@ -10,6 +10,7 @@ use {
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
+    pub name: String,
     pub owner_id: Uuid,
     pub description: Option<String>,
     pub public_or_not: bool,
