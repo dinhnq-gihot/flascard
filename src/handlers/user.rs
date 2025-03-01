@@ -8,6 +8,7 @@ use {
         models::user::{
             DeleteRequest, LoginRequest, RegisterUserRequest, UpdateUserRequest, UserModel,
         },
+        r#static::BLACKLIST_TOKEN_VEC,
         server::AppState,
         utils::jwt::{encode_jwt, Claims},
     },
@@ -124,8 +125,13 @@ impl UserHandler {
         ))
     }
 
-    pub async fn logout(State(state): State<AppState>) -> Result<impl IntoResponse> {
-        unimplemented!();
-        Ok(())
+    pub async fn logout(Extension(token): Extension<String>) -> Result<impl IntoResponse> {
+        debug!("logout: token: {token:?}");
+        BLACKLIST_TOKEN_VEC.lock().push(token);
+
+        Ok(into_ok_response(
+            "Logout successfully".into(),
+            None::<String>,
+        ))
     }
 }

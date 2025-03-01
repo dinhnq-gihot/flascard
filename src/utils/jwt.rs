@@ -3,6 +3,7 @@ use {
     chrono::{Duration, Utc},
     jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation},
     serde::{Deserialize, Serialize},
+    std::env,
     uuid::Uuid,
 };
 
@@ -20,7 +21,7 @@ pub fn encode_jwt(user_id: Uuid, user_role: String) -> Result<String> {
         exp: (Utc::now() + Duration::days(1)).timestamp() as usize,
     };
 
-    let secret = "my-secret";
+    let secret = env::var("JWT_SECRET").map_err(|_| Error::EnvVarNotFound("JWT_SECRET".into()))?;
 
     encode(
         &Header::default(),
@@ -38,7 +39,7 @@ pub fn decode_jwt(token: String) -> Result<Claims> {
     // validation.insecure_disable_signature_validation();
     // validation.validate_aud = false;
 
-    let secret = "my-secret";
+    let secret = env::var("JWT_SECRET").map_err(|_| Error::EnvVarNotFound("JWT_SECRET".into()))?;
     let key = DecodingKey::from_secret(secret.as_bytes());
 
     let claims = decode(&token, &key, &Validation::default())

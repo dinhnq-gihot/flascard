@@ -1,6 +1,7 @@
 use {
     crate::{
         enums::error::{Error, Result},
+        r#static::BLACKLIST_TOKEN_VEC,
         utils::jwt::decode_jwt,
     },
     axum::{
@@ -23,10 +24,20 @@ pub async fn check_jwt(
         if auth.starts_with("Bearer ") {
             let token = &auth[7..]; // Remove "Bearer " prefix
 
+            // If token in blacklist => error
+            if BLACKLIST_TOKEN_VEC
+                .lock()
+                .binary_search(&token.to_string())
+                .is_ok()
+            {
+                return Err(Error::InvalidCredentials);
+            }
+
             match decode_jwt(token.to_string()) {
                 Ok(claims) => {
                     // Store claims in request extensions
                     request.extensions_mut().insert(claims);
+                    request.extensions_mut().insert(token.to_string());
                     return Ok(next.run(request).await);
                 }
                 Err(_) => return Err(Error::InvalidCredentials),

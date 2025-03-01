@@ -60,6 +60,10 @@ pub enum Error {
     // Access denied
     #[error("Access denied")]
     AccessDenied,
+
+    // Environment variable errors
+    #[error("Environment variable {0} not found")]
+    EnvVarNotFound(String),
 }
 
 impl IntoResponse for Error {
