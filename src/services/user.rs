@@ -56,7 +56,7 @@ impl UserService {
         email: Option<String>,
         password: Option<String>,
         role: Option<RoleEnum>,
-    ) -> Result<users::Model> {
+    ) -> Result<Option<users::Model>> {
         let conn = self.db.get_connection().await;
 
         let mut user: users::ActiveModel = Users::find_by_id(id)
@@ -67,6 +67,7 @@ impl UserService {
             .ok_or(Error::RecordNotFound)?
             .into();
 
+        let mut updated = false;
         if let Some(email) = email {
             let existed_email_count = Users::find()
                 .filter(users::Column::Email.eq(&email))
@@ -78,26 +79,31 @@ impl UserService {
                 return Err(Error::UserAlreadyExists);
             } else {
                 user.email = Set(email);
+                updated = true;
             }
         }
         if let Some(name) = name {
             user.name = Set(name);
+            updated = true;
         }
         if let Some(password) = password {
             user.password = Set(password);
+            updated = true;
         }
         if let Some(role) = role {
             user.role = Set(role);
+            updated = true;
         }
-        user.updated_at = Set(chrono::Utc::now().naive_utc());
 
-        user.update(&conn).await.map_err(Error::UpdateFailed)
+        if updated {
+            user.updated_at = Set(chrono::Utc::now().naive_utc());
+            Ok(Some(user.update(&conn).await.map_err(Error::UpdateFailed)?))
+        } else {
+            Ok(None)
+        }
     }
 
-    pub async fn get_by_email(
-        &self,
-        email: String,
-    ) -> Result<Option<users::Model>> {
+    pub async fn get_by_email(&self, email: String) -> Result<Option<users::Model>> {
         let conn = self.db.get_connection().await;
         let user = Users::find()
             .filter(users::Column::Email.eq(email))

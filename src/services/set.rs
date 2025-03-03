@@ -8,6 +8,7 @@ use {
         },
         enums::error::*,
     },
+    chrono::Utc,
     sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set},
     std::sync::Arc,
     uuid::Uuid,
@@ -78,7 +79,7 @@ impl SetService {
         name: Option<String>,
         description: Option<String>,
         public_or_not: Option<bool>,
-    ) -> Result<sets::Model> {
+    ) -> Result<Option<sets::Model>> {
         let conn = self.db.get_connection().await;
 
         let mut set: sets::ActiveModel = Sets::find_by_id(id)
@@ -89,17 +90,26 @@ impl SetService {
             .ok_or(Error::RecordNotFound)?
             .into();
 
+        let mut updated = false;
         if let Some(name) = name {
             set.name = Set(name);
+            updated = true;
         }
         if let Some(d) = description {
             set.description = Set(Some(d));
+            updated = true;
         }
         if let Some(p) = public_or_not {
             set.public_or_not = Set(p);
+            updated = true;
         }
 
-        set.update(&conn).await.map_err(Error::UpdateFailed)
+        if updated {
+            set.updated_at = Set(Utc::now().naive_utc());
+            Ok(Some(set.update(&conn).await.map_err(Error::UpdateFailed)?))
+        } else {
+            Ok(None)
+        }
     }
 
     pub async fn delete_set(&self, id: Uuid) -> Result<()> {
