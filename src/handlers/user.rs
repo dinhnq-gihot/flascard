@@ -103,10 +103,7 @@ impl UserHandler {
             .update_user(claims.id, name, email, password, role)
             .await?;
 
-        Ok(into_ok_response(
-            "Updated successfully".into(),
-            Some(updated),
-        ))
+        Ok(into_ok_response("Updated successfully".into(), updated))
     }
 
     pub async fn delete(

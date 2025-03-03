@@ -75,7 +75,7 @@ impl SetHandler {
             .update_set(id, name, description, public_or_not)
             .await?;
 
-        Ok(into_ok_response("Updated successfully".into(), Some(set)))
+        Ok(into_ok_response("Updated successfully".into(), set))
     }
 
     pub async fn delete(
@@ -103,7 +103,7 @@ impl SetHandler {
 
         let owned_sets = set_service.get_by_owner_id(user_id).await?;
         let shared_sets = shared_set_service
-            .get_all_shared_sets_of_users(user_id)
+            .get_all_shared_sets_of_user(user_id)
             .await?;
 
         let mut all_sets = owned_sets;
@@ -140,12 +140,4 @@ impl SetHandler {
 
         Err(Error::PermissionDenied)
     }
-}
-
-#[axum::debug_handler]
-pub async fn get_all(State(state): State<AppState>) -> Result<impl IntoResponse> {
-    let service = Arc::clone(&state.set_service);
-    let sets = service.get_all_set().await?;
-
-    Ok(into_ok_response("success".into(), Some(sets)))
 }
