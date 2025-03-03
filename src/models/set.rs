@@ -1,4 +1,4 @@
-use {serde::Deserialize, uuid::Uuid};
+use {crate::entities::sea_orm_active_enums::PermissionEnum, serde::Deserialize, uuid::Uuid};
 
 #[derive(Debug, Deserialize)]
 pub struct CreateSetRequest {
@@ -18,4 +18,5 @@ pub struct UpdateSetRequest {
 pub struct ShareSetRequest {
     pub user_id: Uuid,
     pub set_id: Uuid,
+    pub permission: Option<PermissionEnum>,
 }

@@ -25,7 +25,7 @@ pub fn init_blacklist_jwt(path: &PathBuf) -> Result<()> {
 
 pub async fn write_blacklist_jwt(path: &PathBuf) -> Result<()> {
     loop {
-        tokio::time::sleep(Duration::from_secs(10)).await;
+        tokio::time::sleep(Duration::from_secs(60)).await;
 
         let tokens = BLACKLIST_TOKEN_VEC.lock().clone();
         let json = serde_json::to_string_pretty(&tokens).map_err(|e| Error::Anyhow(e.into()))?;

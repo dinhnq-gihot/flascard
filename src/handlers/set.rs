@@ -19,7 +19,7 @@ pub struct SetHandler;
 impl SetHandler {
     pub async fn create(
         State(state): State<AppState>,
-        Extension(claims): Extension<Claims>,
+        Extension(caller): Extension<Claims>,
         Json(payload): Json<CreateSetRequest>,
     ) -> Result<impl IntoResponse> {
         let service = Arc::clone(&state.set_service);
@@ -31,7 +31,7 @@ impl SetHandler {
         } = payload;
 
         let set = service
-            .create_set(claims.id, name, description, public_or_not)
+            .create_set(caller.id, name, description, public_or_not)
             .await?;
 
         Ok(into_ok_response("Created successfully".into(), Some(set)))
@@ -57,13 +57,13 @@ impl SetHandler {
 
     pub async fn update(
         State(state): State<AppState>,
-        Extension(claims): Extension<Claims>,
+        Extension(caller): Extension<Claims>,
         Path(id): Path<Uuid>,
         Json(payload): Json<UpdateSetRequest>,
     ) -> Result<impl IntoResponse> {
         let service = Arc::clone(&state.set_service);
 
-        service.check_permission(id, claims.id).await?;
+        service.is_owner(id, caller.id).await?;
 
         let UpdateSetRequest {
             name,
@@ -80,12 +80,12 @@ impl SetHandler {
 
     pub async fn delete(
         State(state): State<AppState>,
-        Extension(claims): Extension<Claims>,
+        Extension(caller): Extension<Claims>,
         Path(id): Path<Uuid>,
     ) -> Result<impl IntoResponse> {
         let service = Arc::clone(&state.set_service);
 
-        service.check_permission(id, claims.id).await?;
+        service.is_owner(id, caller.id).await?;
         service.delete_set(id).await?;
 
         Ok(into_ok_response(
@@ -114,22 +114,38 @@ impl SetHandler {
 
     pub async fn share(
         State(state): State<AppState>,
-        Extension(claims): Extension<Claims>,
+        Extension(caller): Extension<Claims>,
         Json(payload): Json<ShareSetRequest>,
     ) -> Result<impl IntoResponse> {
         let shared_set_service = Arc::clone(&state.shared_set_service);
         let set_service = Arc::clone(&state.set_service);
 
-        let ShareSetRequest { user_id, set_id } = payload;
+        let ShareSetRequest {
+            user_id,
+            set_id,
+            permission,
+        } = payload;
 
         if shared_set_service
             .get_shared_set(set_id, user_id)
             .await?
             .is_none()
+            && set_service.is_owner(set_id, caller.id).await.is_ok()
         {
-            set_service.check_permission(set_id, user_id).await?
+            let res = shared_set_service
+                .create_shared_set(user_id, set_id, permission)
+                .await?;
+            return Ok(into_ok_response("Shared successfully".into(), Some(res)));
         }
 
-        Ok(())
+        Err(Error::PermissionDenied)
     }
+}
+
+#[axum::debug_handler]
+pub async fn get_all(State(state): State<AppState>) -> Result<impl IntoResponse> {
+    let service = Arc::clone(&state.set_service);
+    let sets = service.get_all_set().await?;
+
+    Ok(into_ok_response("success".into(), Some(sets)))
 }

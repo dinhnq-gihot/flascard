@@ -118,29 +118,35 @@ impl SetService {
         Ok(())
     }
 
-    pub async fn check_permission(&self, id: Uuid, user_id: Uuid) -> Result<()> {
+    pub async fn is_owner(&self, id: Uuid, user_id: Uuid) -> Result<()> {
         let conn = self.db.get_connection().await;
         // check owner permission first
-        let set = Sets::find_by_id(id)
+        let _ = Sets::find_by_id(id)
+            .filter(sets::Column::OwnerId.eq(user_id))
             .filter(sets::Column::IsDeleted.eq(false))
             .one(&conn)
             .await
             .map_err(Error::QueryFailed)?
-            .ok_or(Error::RecordNotFound)?;
+            .ok_or(Error::PermissionDenied)?;
 
-        if set.owner_id != user_id {
-            // check edit permission later
-            let shared_set = SharedSets::find()
-                .filter(shared_sets::Column::SetId.eq(id))
-                .filter(shared_sets::Column::UserId.eq(user_id))
-                .one(&conn)
-                .await
-                .map_err(Error::QueryFailed)?
-                .ok_or(Error::PermissionDenied)?;
-            if shared_set.permission != PermissionEnum::Edit {
-                return Err(Error::PermissionDenied);
-            }
-        }
+        Ok(())
+    }
+
+    pub async fn check_permission(
+        &self,
+        id: Uuid,
+        user_id: Uuid,
+        permission: PermissionEnum,
+    ) -> Result<()> {
+        let conn = self.db.get_connection().await;
+        let _ = SharedSets::find()
+            .filter(shared_sets::Column::SetId.eq(id))
+            .filter(shared_sets::Column::UserId.eq(user_id))
+            .filter(shared_sets::Column::Permission.eq(permission))
+            .one(&conn)
+            .await
+            .map_err(Error::QueryFailed)?
+            .ok_or(Error::PermissionDenied)?;
 
         Ok(())
     }

@@ -7,7 +7,7 @@ use {
     },
 };
 
-pub fn get_user_router(state: AppState) -> Router {
+pub fn get_user_router(state: &AppState) -> Router {
     let users_router = Router::new()
         .route(
             "/",
@@ -22,7 +22,7 @@ pub fn get_user_router(state: AppState) -> Router {
     let auth_router = Router::new()
         .route("/register", post(UserHandler::register_user))
         .route("/login", post(UserHandler::login))
-        .with_state(state);
+        .with_state(state.clone());
 
     Router::new().merge(users_router).merge(auth_router)
 }
