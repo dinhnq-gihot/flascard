@@ -34,3 +34,11 @@ pub fn into_ok_response<T>(msg: String, data: Option<T>) -> (StatusCode, Json<Ge
 
     (status, Json(body))
 }
+
+#[derive(Debug, Serialize)]
+pub struct PaginatedResponse<T> {
+    pub total_pages: u64,
+    pub current_page: u64,
+    pub page_size: u64,
+    pub data: Vec<T>,
+}

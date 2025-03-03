@@ -9,7 +9,7 @@ use {
         enums::error::*,
     },
     sea_orm::{
-        ActiveModelTrait, ColumnTrait, EntityTrait, JoinType, QueryFilter, QuerySelect,
+        ActiveModelTrait, ColumnTrait, EntityTrait, JoinType, ModelTrait, QueryFilter, QuerySelect,
         RelationTrait, Set,
     },
     std::sync::Arc,
@@ -69,15 +69,27 @@ impl SharedSetService {
             .map_err(Error::QueryFailed)
     }
 
-    pub async fn get_all_shared_sets_of_users(&self, user_id: Uuid) -> Result<Vec<sets::Model>> {
+    pub async fn get_all_shared_sets_of_user(&self, user_id: Uuid) -> Result<Vec<sets::Model>> {
         let conn = self.db.get_connection().await;
 
-        Sets::find()
-            .join(JoinType::InnerJoin, sets::Relation::SharedSets.def())
-            .filter(shared_sets::Column::UserId.eq(user_id))
+        let user = Users::find_by_id(user_id)
+            .one(&conn)
+            .await
+            .map_err(Error::QueryFailed)?
+            .ok_or(Error::RecordNotFound)?;
+
+        user.find_related(Sets)
             .filter(sets::Column::IsDeleted.eq(false))
             .all(&conn)
             .await
             .map_err(Error::QueryFailed)
+
+        // Sets::find()
+        //     .join(JoinType::InnerJoin, sets::Relation::SharedSets.def())
+        //     .filter(shared_sets::Column::UserId.eq(user_id))
+        //     .filter(sets::Column::IsDeleted.eq(false))
+        //     .all(&conn)
+        //     .await
+        //     .map_err(Error::QueryFailed)
     }
 }

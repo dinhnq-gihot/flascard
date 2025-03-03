@@ -16,6 +16,7 @@ pub struct Model {
     pub question_id: Uuid,
     pub created_at: DateTime,
     pub updated_at: DateTime,
+    #[serde(skip_serializing)]
     pub is_deleted: bool,
 }
 
