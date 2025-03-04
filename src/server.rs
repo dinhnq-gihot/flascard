@@ -1,7 +1,7 @@
 use {
     crate::{
         config::Config,
-        db::db::Database,
+        db::db_connection::Database,
         enums::error::{Error, Result},
         error,
         routes::setup_routing,
@@ -17,6 +17,7 @@ pub struct AppState {
     pub user_service: Arc<UserService>,
     pub set_service: Arc<SetService>,
     pub shared_set_service: Arc<SharedSetService>,
+    pub qna_service: Arc<QnAService>,
 }
 
 impl AppState {
@@ -30,6 +31,7 @@ impl AppState {
             user_service: Arc::new(UserService::new(Arc::clone(&db))),
             set_service: Arc::new(SetService::new(Arc::clone(&db))),
             shared_set_service: Arc::new(SharedSetService::new(Arc::clone(&db))),
+            qna_service: Arc::new(QnAService::new(Arc::clone(&db))),
         })
     }
 }

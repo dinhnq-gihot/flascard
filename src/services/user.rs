@@ -1,6 +1,6 @@
 use {
     crate::{
-        db::db::Database,
+        db::db_connection::Database,
         entities::{prelude::*, sea_orm_active_enums::RoleEnum, users},
         enums::error::{Error, Result},
     },

@@ -21,8 +21,8 @@ pub async fn check_jwt(
     let auth_header = headers.get(AUTHORIZATION).and_then(|h| h.to_str().ok());
 
     if let Some(auth) = auth_header {
-        if auth.starts_with("Bearer ") {
-            let token = &auth[7..]; // Remove "Bearer " prefix
+        if let Some(stripped) = auth.strip_prefix("Bearer ") {
+            let token = stripped; // Remove "Bearer " prefix
 
             // If token in blacklist => error
             if BLACKLIST_TOKEN_VEC

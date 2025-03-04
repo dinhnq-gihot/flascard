@@ -1,6 +1,6 @@
 use {
     crate::{
-        db::db::Database,
+        db::db_connection::Database,
         entities::{
             prelude::{Sets, Users},
             sea_orm_active_enums::PermissionEnum,

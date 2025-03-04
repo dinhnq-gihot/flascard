@@ -1,30 +1,33 @@
-use crate::entities::sea_orm_active_enums::{PermissionEnum, QuestionTypeEnum, RoleEnum};
+use {
+    crate::entities::sea_orm_active_enums::{PermissionEnum, QuestionTypeEnum, RoleEnum},
+    std::fmt,
+};
 
-impl ToString for PermissionEnum {
-    fn to_string(&self) -> String {
+impl fmt::Display for PermissionEnum {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::View => "View".to_string(),
-            Self::Comment => "Comment".to_string(),
-            Self::Edit => "Edit".to_string(),
+            Self::View => write!(f, "View"),
+            Self::Comment => write!(f, "Comment"),
+            Self::Edit => write!(f, "Edit"),
         }
     }
 }
 
-impl ToString for QuestionTypeEnum {
-    fn to_string(&self) -> String {
+impl fmt::Display for QuestionTypeEnum {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::MultipleChoice => "MultipleChoice".to_string(),
-            Self::CheckBoxes => "CheckBoxes".to_string(),
-            Self::TextFill => "TextFill".to_string(),
+            Self::MultipleChoice => write!(f, "MultipleChoice"),
+            Self::CheckBoxes => write!(f, "CheckBoxes"),
+            Self::TextFill => write!(f, "TextFill"),
         }
     }
 }
 
-impl ToString for RoleEnum {
-    fn to_string(&self) -> String {
+impl fmt::Display for RoleEnum {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Staff => "Staff".to_string(),
-            Self::User => "User".to_string(),
+            Self::Staff => write!(f, "Staff"),
+            Self::User => write!(f, "User"),
         }
     }
 }

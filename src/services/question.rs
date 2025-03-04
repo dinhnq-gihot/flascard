@@ -1,6 +1,6 @@
 use {
     crate::{
-        db::db::Database,
+        db::db_connection::Database,
         entities::{
             answers,
             prelude::{Answers, Questions},
@@ -28,7 +28,7 @@ impl QnAService {
     }
 
     pub async fn create(
-        self,
+        &self,
         payload: CreateQnARequest,
         creator_id: Uuid,
     ) -> Result<(questions::Model, Vec<answers::Model>)> {
@@ -63,7 +63,7 @@ impl QnAService {
         Ok((question, created_answers))
     }
 
-    pub async fn get_by_id(self, id: Uuid) -> Result<(questions::Model, Vec<answers::Model>)> {
+    pub async fn get_by_id(&self, id: Uuid) -> Result<(questions::Model, Vec<answers::Model>)> {
         let conn = self.db.get_connection().await;
         let question = Questions::find_by_id(id)
             .filter(questions::Column::IsDeleted.eq(false))
@@ -83,7 +83,7 @@ impl QnAService {
     }
 
     pub async fn get_all(
-        self,
+        &self,
         params: QueryQuestionParams,
     ) -> Result<PaginatedResponse<questions::Model>> {
         let conn = self.db.get_connection().await;
@@ -95,6 +95,12 @@ impl QnAService {
         }
         if let Some(r#type) = params.r#type {
             query = query.filter(questions::Column::Type.eq(r#type));
+        }
+        if let Some(set_id) = params.set_id {
+            query = query.filter(questions::Column::SetId.eq(set_id));
+        }
+        if let Some(user_id) = params.user_id {
+            query = query.filter(questions::Column::CreatorId.eq(user_id));
         }
 
         // 🔹 Apply sorting (default: created_at DESC)
@@ -135,7 +141,7 @@ impl QnAService {
     }
 
     pub async fn update_question(
-        self,
+        &self,
         id: Uuid,
         content: Option<String>,
     ) -> Result<Option<questions::Model>> {
@@ -165,7 +171,7 @@ impl QnAService {
     }
 
     pub async fn update_answer(
-        self,
+        &self,
         id: Uuid,
         payload: UpdateAnswerRequest,
     ) -> Result<Option<answers::Model>> {
@@ -198,23 +204,42 @@ impl QnAService {
         }
     }
 
-    pub async fn delete_question(self, id: Uuid) -> Result<()> {
+    pub async fn delete_question(&self, id: Uuid) -> Result<()> {
         let conn = self.db.get_connection().await;
-        let mut question: questions::ActiveModel = Questions::find_by_id(id)
+        let question = Questions::find_by_id(id)
             .filter(questions::Column::IsDeleted.eq(false))
             .one(&conn)
             .await
             .map_err(Error::QueryFailed)?
-            .ok_or(Error::RecordNotFound)?
-            .into();
-        question.is_deleted = Set(true);
+            .ok_or(Error::RecordNotFound)?;
 
-        question.update(&conn).await.map_err(Error::DeleteFailed)?;
+        let related_answers = question
+            .find_related(Answers)
+            .filter(answers::Column::IsDeleted.eq(false))
+            .all(&conn)
+            .await
+            .map_err(Error::QueryFailed)?
+            .into_iter()
+            .map(|a| a.into())
+            .collect::<Vec<answers::ActiveModel>>();
+
+        for mut a in related_answers.into_iter() {
+            a.is_deleted = Set(true);
+            a.update(&conn).await.map_err(Error::DeleteFailed)?;
+        }
+
+        let mut updating_question: questions::ActiveModel = question.into();
+
+        updating_question.is_deleted = Set(true);
+        updating_question
+            .update(&conn)
+            .await
+            .map_err(Error::DeleteFailed)?;
 
         Ok(())
     }
 
-    pub async fn delete_answer(self, id: Uuid) -> Result<()> {
+    pub async fn delete_answer(&self, id: Uuid) -> Result<()> {
         let conn = self.db.get_connection().await;
         let mut answer: answers::ActiveModel = Answers::find_by_id(id)
             .filter(answers::Column::IsDeleted.eq(false))
@@ -225,9 +250,32 @@ impl QnAService {
             .into();
 
         answer.is_deleted = Set(true);
-
         answer.update(&conn).await.map_err(Error::DeleteFailed)?;
 
         Ok(())
+    }
+
+    pub async fn is_creator_of_question(&self, question_id: Uuid, user_id: Uuid) -> Result<bool> {
+        let conn = self.db.get_connection().await;
+        let question = Questions::find_by_id(question_id)
+            .filter(questions::Column::IsDeleted.eq(false))
+            .filter(questions::Column::CreatorId.eq(user_id))
+            .one(&conn)
+            .await
+            .map_err(Error::QueryFailed)?;
+
+        Ok(question.is_some())
+    }
+
+    pub async fn is_creator_of_answer(&self, answer_id: Uuid, user_id: Uuid) -> Result<bool> {
+        let conn = self.db.get_connection().await;
+        let answer = Answers::find_by_id(answer_id)
+            .filter(questions::Column::IsDeleted.eq(false))
+            .filter(questions::Column::CreatorId.eq(user_id))
+            .one(&conn)
+            .await
+            .map_err(Error::QueryFailed)?;
+
+        Ok(answer.is_some())
     }
 }
