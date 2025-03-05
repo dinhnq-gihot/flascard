@@ -15,7 +15,7 @@ pub struct Model {
     pub question_id: Uuid,
     #[sea_orm(column_type = "Text")]
     pub question_content: String,
-    pub answer_content: Json,
+    pub answers: Json,
     pub r#type: QuestionTypeEnum,
     pub created_at: DateTime,
     pub updated_at: DateTime,
