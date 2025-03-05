@@ -17,7 +17,6 @@ pub struct Model {
     pub creator_id: Uuid,
     pub created_at: DateTime,
     pub updated_at: DateTime,
-    #[serde(skip_serializing)]
     pub is_deleted: bool,
 }
 
@@ -25,8 +24,6 @@ pub struct Model {
 pub enum Relation {
     #[sea_orm(has_many = "super::answers::Entity")]
     Answers,
-    #[sea_orm(has_many = "super::quiz_question_answers::Entity")]
-    QuizQuestionAnswers,
     #[sea_orm(has_many = "super::quiz_questions::Entity")]
     QuizQuestions,
     #[sea_orm(
@@ -50,12 +47,6 @@ pub enum Relation {
 impl Related<super::answers::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Answers.def()
-    }
-}
-
-impl Related<super::quiz_question_answers::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::QuizQuestionAnswers.def()
     }
 }
 

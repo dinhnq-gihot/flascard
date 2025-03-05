@@ -1,8 +1,9 @@
-use sea_orm_migration::{prelude::*, schema::*, sea_orm::Iterable};
-
-use crate::{
-    m20250223_065024_create_questions_table::{QuestionType, QuestionTypeEnum, Questions},
-    m20250223_070735_create_quizes_table::Quizes,
+use {
+    crate::{
+        m20250223_065024_create_questions_table::{QuestionType, QuestionTypeEnum, Questions},
+        m20250223_070735_create_quizes_table::Quizes,
+    },
+    sea_orm_migration::{prelude::*, schema::*, sea_orm::Iterable},
 };
 
 #[derive(DeriveMigrationName)]
@@ -20,6 +21,7 @@ impl MigrationTrait for Migration {
                     .col(uuid(QuizQuestions::QuizId))
                     .col(uuid(QuizQuestions::QuestionId))
                     .col(text(QuizQuestions::QuestionContent))
+                    .col(json(QuizQuestions::AnswerContent))
                     .col(enumeration(
                         QuizQuestions::Type,
                         QuestionTypeEnum,
@@ -61,6 +63,7 @@ pub enum QuizQuestions {
     QuizId,
     QuestionId,
     QuestionContent,
+    AnswerContent,
     Type,
     CreatedAt,
     UpdatedAt,

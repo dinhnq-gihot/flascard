@@ -4,7 +4,6 @@ pub mod prelude;
 
 pub mod answers;
 pub mod questions;
-pub mod quiz_question_answers;
 pub mod quiz_questions;
 pub mod quizes;
 pub mod sea_orm_active_enums;

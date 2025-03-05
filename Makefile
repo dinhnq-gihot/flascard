@@ -5,7 +5,7 @@ run-flashcard:
 	RUST_BACKTRACE=full RUST_LOG=trace,hyper=info${RUST_LOG} cargo run --bin flashcard
 
 rollback-migration:
-	sea-orm-cli migrate down -n 12
+	sea-orm-cli migrate down -n 11
 
 run-migration:
 	sea-orm-cli migrate up
