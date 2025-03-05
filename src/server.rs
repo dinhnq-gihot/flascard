@@ -5,7 +5,10 @@ use {
         enums::error::{Error, Result},
         error,
         routes::setup_routing,
-        services::prelude::*,
+        services::{
+            prelude::*, quiz::QuizService, quiz_question::QuizQuestionService,
+            shared_quiz::SharedQuizService,
+        },
     },
     std::sync::Arc,
     tokio::net::TcpListener,
@@ -18,6 +21,9 @@ pub struct AppState {
     pub set_service: Arc<SetService>,
     pub shared_set_service: Arc<SharedSetService>,
     pub qna_service: Arc<QnAService>,
+    pub quiz_service: Arc<QuizService>,
+    pub quiz_question_service: Arc<QuizQuestionService>,
+    pub shared_quiz_service: Arc<SharedQuizService>,
 }
 
 impl AppState {
@@ -32,6 +38,9 @@ impl AppState {
             set_service: Arc::new(SetService::new(Arc::clone(&db))),
             shared_set_service: Arc::new(SharedSetService::new(Arc::clone(&db))),
             qna_service: Arc::new(QnAService::new(Arc::clone(&db))),
+            quiz_service: Arc::new(QuizService::new(Arc::clone(&db))),
+            quiz_question_service: Arc::new(QuizQuestionService::new(Arc::clone(&db))),
+            shared_quiz_service: Arc::new(SharedQuizService::new(Arc::clone(&db))),
         })
     }
 }

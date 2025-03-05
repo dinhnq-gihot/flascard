@@ -1,4 +1,7 @@
-use {serde::Deserialize, serde_json::Value, uuid::Uuid};
+use {
+    crate::entities::sea_orm_active_enums::PermissionEnum, serde::Deserialize, serde_json::Value,
+    uuid::Uuid,
+};
 
 #[derive(Debug, Deserialize)]
 pub struct CreateQuizRequest {
@@ -19,4 +22,10 @@ pub struct FilterQuizParams {
     pub set_id: Option<Uuid>,
     pub creator_id: Option<Uuid>,
     pub sort_direction: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ShareQuizForUser {
+    pub user_id: Uuid,
+    pub permission: PermissionEnum,
 }
