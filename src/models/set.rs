@@ -15,8 +15,7 @@ pub struct UpdateSetRequest {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct ShareSetRequest {
+pub struct ShareSetForUser {
     pub user_id: Uuid,
-    pub set_id: Uuid,
     pub permission: Option<PermissionEnum>,
 }

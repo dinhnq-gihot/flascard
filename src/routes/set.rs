@@ -17,7 +17,7 @@ pub fn get_set_router(state: &AppState) -> Router {
                 .delete(SetHandler::delete),
         )
         .route("/users/{id}/sets/", get(SetHandler::get_all_sets_of_user))
-        .route("/share", post(SetHandler::share))
+        .route("/{id}/share", post(SetHandler::share))
         .layer(middleware::from_fn(check_jwt))
         .with_state(state.clone())
 }

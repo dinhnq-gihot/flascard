@@ -1,7 +1,7 @@
 use {
     crate::{
         enums::{error::*, generic::into_ok_response},
-        models::set::{CreateSetRequest, ShareSetRequest, UpdateSetRequest},
+        models::set::{CreateSetRequest, ShareSetForUser, UpdateSetRequest},
         server::AppState,
         utils::jwt::Claims,
     },
@@ -115,26 +115,14 @@ impl SetHandler {
     pub async fn share(
         State(state): State<AppState>,
         Extension(caller): Extension<Claims>,
-        Json(payload): Json<ShareSetRequest>,
+        Path(set_id): Path<Uuid>,
+        Json(payload): Json<Vec<ShareSetForUser>>,
     ) -> Result<impl IntoResponse> {
         let shared_set_service = Arc::clone(&state.shared_set_service);
         let set_service = Arc::clone(&state.set_service);
 
-        let ShareSetRequest {
-            user_id,
-            set_id,
-            permission,
-        } = payload;
-
-        if shared_set_service
-            .get_shared_set(set_id, user_id)
-            .await?
-            .is_none()
-            && set_service.is_owner(set_id, caller.id).await.is_ok()
-        {
-            let res = shared_set_service
-                .create_shared_set(user_id, set_id, permission)
-                .await?;
+        if set_service.is_owner(set_id, caller.id).await.is_ok() {
+            let res = shared_set_service.share_set(set_id, payload).await?;
             return Ok(into_ok_response("Shared successfully".into(), Some(res)));
         }
 
