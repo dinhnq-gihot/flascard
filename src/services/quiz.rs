@@ -1,17 +1,11 @@
 use {
     crate::{
         db::db_connection::Database,
-        entities::{
-            prelude::{Quizes, SharedQuizes},
-            quizes, shared_quizes,
-        },
+        entities::{prelude::Quizes, quizes},
         enums::error::*,
         models::quiz::{CreateQuizRequest, FilterQuizParams, UpdateQuizRequest},
     },
-    sea_orm::{
-        sea_query::OnConflict, ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, QueryOrder,
-        Set,
-    },
+    sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, QueryOrder, Set},
     std::sync::Arc,
     uuid::Uuid,
 };
@@ -29,16 +23,15 @@ impl QuizService {
         &self,
         payload: CreateQuizRequest,
         creator_id: Uuid,
-    ) -> Result<(quizes::Model, Vec<shared_quizes::Model>)> {
+    ) -> Result<quizes::Model> {
         let conn = self.db.get_connection().await;
         let CreateQuizRequest {
             created_from,
             is_public,
             question_counts,
-            share_with,
         } = payload;
 
-        let quiz = quizes::ActiveModel {
+        quizes::ActiveModel {
             set_id: Set(created_from),
             creator_id: Set(creator_id),
             public_or_not: Set(is_public),
@@ -47,31 +40,14 @@ impl QuizService {
         }
         .insert(&conn)
         .await
-        .map_err(Error::InsertFailed)?;
-
-        let sharing_quizes: Vec<shared_quizes::ActiveModel> = share_with
-            .into_iter()
-            .map(|participant_id| {
-                shared_quizes::ActiveModel {
-                    user_id: Set(creator_id),
-                    quiz_id: Set(participant_id),
-                    ..Default::default()
-                }
-            })
-            .collect();
-        let shared_quizes = SharedQuizes::insert_many(sharing_quizes)
-            .exec_with_returning_many(&conn)
-            .await
-            .map_err(Error::InsertFailed)?;
-
-        Ok((quiz, shared_quizes))
+        .map_err(Error::InsertFailed)
     }
 
     pub async fn update_one(
         &self,
         id: Uuid,
         payload: UpdateQuizRequest,
-    ) -> Result<(Option<quizes::Model>, Option<Vec<shared_quizes::Model>>)> {
+    ) -> Result<Option<quizes::Model>> {
         let conn = self.db.get_connection().await;
         let mut quiz: quizes::ActiveModel = Quizes::find_by_id(id)
             .one(&conn)
@@ -80,61 +56,21 @@ impl QuizService {
             .ok_or(Error::RecordNotFound)?
             .into();
 
-        let updated_quiz = if let Some(p) = payload.is_public {
+        let mut updated = false;
+        if let Some(p) = payload.is_public {
             quiz.is_published = Set(p);
-            Some(quiz.update(&conn).await.map_err(Error::UpdateFailed)?)
+            updated = true;
+        }
+        if let Some(publish) = payload.publish {
+            quiz.is_published = Set(publish);
+            updated = true;
+        }
+
+        if updated {
+            Ok(Some(quiz.update(&conn).await.map_err(Error::UpdateFailed)?))
         } else {
-            None
-        };
-
-        let new_shared_quizes = if let Some(new_participants) = payload.share_with {
-            let shared_quizes = SharedQuizes::find()
-                .filter(shared_quizes::Column::QuizId.eq(id))
-                .all(&conn)
-                .await
-                .map_err(Error::QueryFailed)?;
-
-            // Remove old participants not to be updated to share
-            let users_to_unshare: Vec<Uuid> = shared_quizes
-                .iter()
-                .filter(|q| !new_participants.contains(&q.user_id))
-                .map(|q| q.user_id)
-                .collect();
-            if !users_to_unshare.is_empty() {
-                SharedQuizes::delete_many()
-                    .filter(shared_quizes::Column::QuizId.eq(id))
-                    .filter(shared_quizes::Column::UserId.is_in(users_to_unshare))
-                    .exec(&conn)
-                    .await
-                    .map_err(Error::DeleteFailed)?;
-            }
-
-            // Update new participants
-            let new_sharing_quizes: Vec<shared_quizes::ActiveModel> = new_participants
-                .into_iter()
-                .map(|participant_id| {
-                    shared_quizes::ActiveModel {
-                        user_id: Set(participant_id),
-                        quiz_id: Set(id),
-                        ..Default::default()
-                    }
-                })
-                .collect();
-            let on_conflict = OnConflict::column(shared_quizes::Column::UserId)
-                .do_nothing()
-                .to_owned();
-            Some(
-                SharedQuizes::insert_many(new_sharing_quizes)
-                    .on_conflict(on_conflict)
-                    .exec_with_returning_many(&conn)
-                    .await
-                    .map_err(Error::InsertFailed)?,
-            )
-        } else {
-            None
-        };
-
-        Ok((updated_quiz, new_shared_quizes))
+            Ok(None)
+        }
     }
 
     pub async fn delete_one(&self, id: Uuid) -> Result<()> {

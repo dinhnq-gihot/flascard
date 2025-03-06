@@ -2,11 +2,13 @@ use {
     crate::{handlers::fallback, server::AppState},
     axum::{routing::get, Router},
     qna::{get_answer_router, get_question_router},
+    quiz::quiz_router,
     set::get_set_router,
     user::get_user_router,
 };
 
 mod qna;
+mod quiz;
 mod set;
 mod user;
 
@@ -19,7 +21,8 @@ pub fn setup_routing(state: AppState) -> Router {
         .nest("/users", get_user_router(&state))
         .nest("/sets", get_set_router(&state))
         .nest("/questions", get_question_router(&state))
-        .nest("/answers", get_answer_router(&state));
+        .nest("/answers", get_answer_router(&state))
+        .nest("/quizzes", quiz_router(&state));
 
     Router::new()
         .fallback(fallback)

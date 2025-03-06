@@ -55,6 +55,10 @@ pub enum Error {
     #[error("JWT encode failed: {0}")]
     EncodeJwtFailed(#[source] jsonwebtoken::errors::Error),
 
+    // Business errors
+    #[error("Quiz had been published")]
+    Published,
+
     // anyhow error
     #[error(transparent)]
     Anyhow(#[from] anyhow::Error),
@@ -73,7 +77,9 @@ impl IntoResponse for Error {
         let status = match &self {
             Error::RecordNotFound => StatusCode::NOT_FOUND,
             Error::UserAlreadyExists => StatusCode::CONFLICT,
-            Error::AccessDenied | Error::PermissionDenied => StatusCode::FORBIDDEN,
+            Error::AccessDenied | Error::PermissionDenied | Error::Published => {
+                StatusCode::FORBIDDEN
+            }
             Error::InvalidCredentials => StatusCode::UNAUTHORIZED,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         };

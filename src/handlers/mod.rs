@@ -4,10 +4,10 @@ use axum::{
 };
 
 pub mod qna;
-pub mod set;
-pub mod user;
 pub mod quiz;
-pub mod quiz_question;
+pub mod set;
+pub mod share_quiz;
+pub mod user;
 
 pub async fn fallback(uri: Uri) -> impl IntoResponse {
     (StatusCode::NOT_FOUND, format!("No route: {uri}"))
