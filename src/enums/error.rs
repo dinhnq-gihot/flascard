@@ -58,6 +58,8 @@ pub enum Error {
     // Business errors
     #[error("Quiz had been published")]
     Published,
+    #[error("Invalid Answer")]
+    InvalidAnswer,
 
     // anyhow error
     #[error(transparent)]
@@ -77,9 +79,10 @@ impl IntoResponse for Error {
         let status = match &self {
             Error::RecordNotFound => StatusCode::NOT_FOUND,
             Error::UserAlreadyExists => StatusCode::CONFLICT,
-            Error::AccessDenied | Error::PermissionDenied | Error::Published => {
-                StatusCode::FORBIDDEN
-            }
+            Error::AccessDenied
+            | Error::PermissionDenied
+            | Error::Published
+            | Error::InvalidAnswer => StatusCode::FORBIDDEN,
             Error::InvalidCredentials => StatusCode::UNAUTHORIZED,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         };

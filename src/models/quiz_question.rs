@@ -22,5 +22,4 @@ pub struct CreateQuizQuestionRequest {
 pub struct UpdateQuizQuestionRequest {
     pub question_content: Option<String>,
     pub answers: Option<Vec<QuizAnswer>>,
-    pub r#type: Option<QuestionTypeEnum>,
 }

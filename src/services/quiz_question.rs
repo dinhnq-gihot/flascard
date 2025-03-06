@@ -55,7 +55,7 @@ impl QuizQuestionService {
     ) -> Result<Option<quiz_questions::Model>> {
         let conn = self.db.get_connection().await;
 
-        let mut quiz: quiz_questions::ActiveModel = QuizQuestions::find_by_id(id)
+        let mut quiz_question: quiz_questions::ActiveModel = QuizQuestions::find_by_id(id)
             .filter(quiz_questions::Column::IsDeleted.eq(false))
             .filter(quiz_questions::Column::QuizId.eq(quiz_id))
             .one(&conn)
@@ -67,26 +67,26 @@ impl QuizQuestionService {
         let UpdateQuizQuestionRequest {
             question_content,
             answers,
-            r#type,
         } = payload;
 
         let mut updated = false;
         if let Some(question_content) = question_content {
-            quiz.question_content = Set(question_content);
+            quiz_question.question_content = Set(question_content);
             updated = true;
         }
         if let Some(answers) = answers {
             let value = serde_json::to_value(answers).map_err(|e| Error::Anyhow(e.into()))?;
-            quiz.answers = Set(value);
-            updated = true;
-        }
-        if let Some(t) = r#type {
-            quiz.r#type = Set(t);
+            quiz_question.answers = Set(value);
             updated = true;
         }
 
         if updated {
-            Ok(Some(quiz.update(&conn).await.map_err(Error::UpdateFailed)?))
+            Ok(Some(
+                quiz_question
+                    .update(&conn)
+                    .await
+                    .map_err(Error::UpdateFailed)?,
+            ))
         } else {
             Ok(None)
         }
@@ -113,5 +113,26 @@ impl QuizQuestionService {
             .all(&conn)
             .await
             .map_err(Error::QueryFailed)
+    }
+
+    pub async fn delete(&self, id: Uuid, quiz_id: Uuid) -> Result<()> {
+        let conn = self.db.get_connection().await;
+
+        let mut quiz_question: quiz_questions::ActiveModel = QuizQuestions::find_by_id(id)
+            .filter(quiz_questions::Column::IsDeleted.eq(false))
+            .filter(quiz_questions::Column::QuizId.eq(quiz_id))
+            .one(&conn)
+            .await
+            .map_err(Error::QueryFailed)?
+            .ok_or(Error::RecordNotFound)?
+            .into();
+
+        quiz_question.is_deleted = Set(true);
+        quiz_question
+            .update(&conn)
+            .await
+            .map_err(Error::DeleteFailed)?;
+
+        Ok(())
     }
 }

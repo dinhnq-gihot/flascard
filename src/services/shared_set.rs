@@ -39,6 +39,7 @@ impl SharedSetService {
             .await
             .map_err(Error::QueryFailed)?;
 
+        // filter all shared user not in sharing users
         let sharing_user_ids = sharing_users
             .iter()
             .map(|u| u.user_id)
@@ -48,7 +49,7 @@ impl SharedSetService {
             .filter(|q| !sharing_user_ids.contains(&q.user_id))
             .map(|q| q.user_id)
             .collect::<Vec<Uuid>>();
-
+        // delete all unshare users that had been shared before
         if !users_to_unshare.is_empty() {
             let deleted_shares = SharedSets::delete_many()
                 .filter(shared_sets::Column::SetId.eq(set_id))

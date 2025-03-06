@@ -1,6 +1,8 @@
 use {
     crate::{
-        handlers::{quiz::QuizHandler, share_quiz::ShareQuizHandler},
+        handlers::{
+            quiz::QuizHandler, quiz_question::QuizQuestionHandler, share_quiz::ShareQuizHandler,
+        },
         middleware::jwt::check_jwt,
         server::AppState,
     },
@@ -37,5 +39,22 @@ pub fn quiz_router(state: &AppState) -> Router {
         .layer(middleware::from_fn(check_jwt))
         .with_state(state.clone());
 
-    Router::new().merge(quiz_router).merge(share_quiz_router)
+    let quiz_question_router: Router = Router::new()
+        .route(
+            "/{id}/questions",
+            post(QuizQuestionHandler::create).get(QuizQuestionHandler::get_all),
+        )
+        .route(
+            "/{quiz_id}/questions/{quiz_question_id}",
+            get(QuizQuestionHandler::get_by_id)
+                .patch(QuizQuestionHandler::update)
+                .delete(QuizQuestionHandler::delete),
+        )
+        .layer(middleware::from_fn(check_jwt))
+        .with_state(state.clone());
+
+    Router::new()
+        .merge(quiz_router)
+        .merge(share_quiz_router)
+        .merge(quiz_question_router)
 }

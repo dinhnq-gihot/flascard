@@ -99,4 +99,16 @@ impl SharedQuizService {
             .await
             .map_err(Error::QueryFailed)
     }
+
+    pub async fn is_shared(&self, quiz_id: Uuid, user_id: Uuid) -> Result<bool> {
+        let conn = self.db.get_connection().await;
+        let shared_quiz = SharedQuizes::find()
+            .filter(shared_quizes::Column::QuizId.eq(quiz_id))
+            .filter(shared_quizes::Column::UserId.eq(user_id))
+            .one(&conn)
+            .await
+            .map_err(Error::QueryFailed)?;
+
+        Ok(shared_quiz.is_some())
+    }
 }

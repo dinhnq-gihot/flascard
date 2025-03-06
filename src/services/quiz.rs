@@ -117,4 +117,15 @@ impl QuizService {
 
         query.all(&conn).await.map_err(Error::QueryFailed)
     }
+
+    pub async fn is_created_by(&self, quiz_id: Uuid, user_id: Uuid) -> Result<bool> {
+        let conn = self.db.get_connection().await;
+        let quiz = Quizes::find_by_id(quiz_id)
+            .filter(quizes::Column::CreatorId.eq(user_id))
+            .one(&conn)
+            .await
+            .map_err(Error::QueryFailed)?;
+
+        Ok(quiz.is_some())
+    }
 }
