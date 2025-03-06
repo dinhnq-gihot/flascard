@@ -33,7 +33,7 @@ pub fn quiz_router(state: &AppState) -> Router {
             get(ShareQuizHandler::get_all_shared_users_of_quiz),
         )
         .route(
-            "users/{id}/shared_quizzes",
+            "/users/{id}/shared_quizzes",
             get(ShareQuizHandler::get_all_shared_quizzes_of_user),
         )
         .layer(middleware::from_fn(check_jwt))
