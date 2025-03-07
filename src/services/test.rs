@@ -1,4 +1,11 @@
-use {crate::db::db::Database, std::sync::Arc, crate::entities::prelude::Tests};
+use {
+    crate::{
+        db::db_connection::Database,
+        entities::{prelude::Tests, tests},
+    },
+    std::sync::Arc,
+    uuid::Uuid,
+};
 
 pub struct TestService {
     db: Arc<Database>,
@@ -9,5 +16,9 @@ impl TestService {
         Self { db }
     }
 
+    pub async fn create(&self, quiz_id: Uuid) {}
 
+    pub async fn get_one() {
+        
+    }
 }

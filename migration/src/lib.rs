@@ -6,6 +6,7 @@ mod m20250223_065024_create_questions_table;
 mod m20250223_065613_create_answers_table;
 mod m20250223_070735_create_quizes_table;
 mod m20250223_071935_create_quiz_questions_table;
+mod m20250223_072007_create_quiz_question_anwsers_table;
 mod m20250223_072118_create_shared_quizes_table;
 mod m20250223_072123_create_shared_sets_table;
 mod m20250223_075910_create_tests_table;
@@ -24,6 +25,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20250223_065613_create_answers_table::Migration),
             Box::new(m20250223_070735_create_quizes_table::Migration),
             Box::new(m20250223_071935_create_quiz_questions_table::Migration),
+            Box::new(m20250223_072007_create_quiz_question_anwsers_table::Migration),
             Box::new(m20250223_072118_create_shared_quizes_table::Migration),
             Box::new(m20250223_072123_create_shared_sets_table::Migration),
             Box::new(m20250223_075910_create_tests_table::Migration),

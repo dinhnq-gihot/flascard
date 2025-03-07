@@ -13,7 +13,8 @@ pub struct Model {
     pub test_id: Uuid,
     pub quiz_question_id: Uuid,
     #[sea_orm(column_type = "Text", nullable)]
-    pub result: Option<String>,
+    pub text_answer: Option<String>,
+    pub select_answer_ids: Option<Vec<Uuid>>,
     pub is_correct: Option<bool>,
     pub spent_time: i32,
 }

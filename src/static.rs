@@ -40,3 +40,33 @@ pub async fn write_blacklist_jwt(path: &PathBuf) -> Result<()> {
         debug!("write_blacklist_jwt: {path:?}")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use {
+        serde::{Deserialize, Serialize},
+        serde_json::Value,
+    };
+
+    #[derive(Debug, Serialize, Deserialize, PartialEq)]
+    struct Item {
+        text: String,
+        is_correct: bool, // Use `bool` instead of `String` for correctness
+    }
+
+    #[test]
+    fn test_json() {
+        let json1 = r#"[{"text": "a", "is_correct": true}, {"text": "b", "is_correct": false}]"#;
+        let json2 = r#"[{"text": "b", "is_correct": false}, {"text": "a", "is_correct": true}]"#;
+
+        let obj1: Value = serde_json::from_str(json1).unwrap();
+        let obj2: Value = serde_json::from_str(json2).unwrap();
+
+        // Compare the two vectors
+        if obj1 == obj2 {
+            println!("✅ The JSON arrays are equal!");
+        } else {
+            println!("❌ The JSON arrays are different!");
+        }
+    }
+}

@@ -1,6 +1,11 @@
-use sea_orm_migration::{prelude::*, schema::*};
-
-use crate::m20250223_075910_create_tests_table::Tests;
+use {
+    crate::m20250223_075910_create_tests_table::Tests,
+    sea_orm_migration::{
+        prelude::{extension::postgres::Type, *},
+        schema::*,
+        sea_orm::{EnumIter, Iterable},
+    },
+};
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -8,6 +13,15 @@ pub struct Migration;
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        // manager
+        //     .create_type(
+        //         Type::create()
+        //             .as_enum(StatusEnum)
+        //             .values(Status::iter())
+        //             .to_owned(),
+        //     )
+        //     .await?;
+
         manager
             .create_table(
                 Table::create()
@@ -36,6 +50,19 @@ impl MigrationTrait for Migration {
             .await
     }
 }
+
+// #[derive(DeriveIden)]
+// struct StatusEnum;
+
+// #[derive(Iden, EnumIter)]
+// pub enum Status {
+//     #[iden = "NotStart"]
+//     NotStart,
+//     #[iden = "InProgess"]
+//     InProgess,
+//     #[iden = "Submitted"]
+//     Submitted,
+// }
 
 #[derive(DeriveIden)]
 pub enum TestStates {

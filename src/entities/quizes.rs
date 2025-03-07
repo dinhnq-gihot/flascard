@@ -22,6 +22,8 @@ pub struct Model {
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
+    #[sea_orm(has_many = "super::quiz_question_answers::Entity")]
+    QuizQuestionAnswers,
     #[sea_orm(has_many = "super::quiz_questions::Entity")]
     QuizQuestions,
     #[sea_orm(
@@ -44,6 +46,12 @@ pub enum Relation {
         on_delete = "Restrict"
     )]
     Users,
+}
+
+impl Related<super::quiz_question_answers::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::QuizQuestionAnswers.def()
+    }
 }
 
 impl Related<super::quiz_questions::Entity> for Entity {

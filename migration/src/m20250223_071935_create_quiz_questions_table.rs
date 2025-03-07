@@ -21,7 +21,6 @@ impl MigrationTrait for Migration {
                     .col(uuid(QuizQuestions::QuizId))
                     .col(uuid(QuizQuestions::QuestionId))
                     .col(text(QuizQuestions::QuestionContent))
-                    .col(json(QuizQuestions::Answers))
                     .col(enumeration(
                         QuizQuestions::Type,
                         QuestionTypeEnum,
@@ -63,7 +62,6 @@ pub enum QuizQuestions {
     QuizId,
     QuestionId,
     QuestionContent,
-    Answers,
     Type,
     CreatedAt,
     UpdatedAt,

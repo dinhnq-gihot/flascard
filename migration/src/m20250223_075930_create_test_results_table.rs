@@ -20,7 +20,12 @@ impl MigrationTrait for Migration {
                     .col(pk_uuid(TestResults::Id).default(Expr::cust("uuid_generate_v4()")))
                     .col(uuid(TestResults::TestId))
                     .col(uuid(TestResults::QuizQuestionId))
-                    .col(text_null(TestResults::Result)) // Changed to text type
+                    .col(text_null(TestResults::TextAnswer)) // Changed to text type
+                    .col(
+                        ColumnDef::new(TestResults::SelectAnswerIds)
+                            .array(ColumnType::Uuid)
+                            .null(),
+                    )
                     .col(boolean_null(TestResults::IsCorrect))
                     .col(unsigned(TestResults::SpentTime))
                     .foreign_key(
@@ -55,7 +60,8 @@ enum TestResults {
     Id,
     TestId,
     QuizQuestionId,
-    Result,
+    TextAnswer,
+    SelectAnswerIds,
     IsCorrect,
     SpentTime,
 }
