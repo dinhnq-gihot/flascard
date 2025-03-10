@@ -1,11 +1,15 @@
 use {
     crate::{
         db::db_connection::Database,
-        entities::{prelude::QuizQuestions, quiz_questions},
+        entities::{
+            prelude::{QuizQuestionAnswers, QuizQuestions},
+            quiz_question_answers, quiz_questions,
+        },
         enums::error::*,
         models::quiz_question::{CreateQuizQuestionRequest, UpdateQuizQuestionRequest},
+        utils::validator::validate_answer,
     },
-    sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set},
+    sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set, TransactionTrait},
     std::sync::Arc,
     uuid::Uuid,
 };
@@ -23,7 +27,7 @@ impl QuizQuestionService {
         &self,
         quiz_id: Uuid,
         payload: CreateQuizQuestionRequest,
-    ) -> Result<quiz_questions::Model> {
+    ) -> Result<(quiz_questions::Model, Vec<quiz_question_answers::Model>)> {
         let conn = self.db.get_connection().await;
 
         let CreateQuizQuestionRequest {
@@ -32,19 +36,37 @@ impl QuizQuestionService {
             r#type,
             question_id,
         } = payload;
-        let answers_in_json = serde_json::to_value(answers).map_err(|e| Error::Anyhow(e.into()))?;
 
-        quiz_questions::ActiveModel {
+        let return_question = quiz_questions::ActiveModel {
             quiz_id: Set(quiz_id),
             question_id: Set(question_id),
             question_content: Set(question_content),
-            answers: Set(answers_in_json),
             r#type: Set(r#type),
             ..Default::default()
         }
         .insert(&conn)
         .await
-        .map_err(Error::InsertFailed)
+        .map_err(Error::InsertFailed)?;
+
+        let answer_active_models = answers
+            .into_iter()
+            .map(|a| {
+                quiz_question_answers::ActiveModel {
+                    quiz_id: Set(quiz_id),
+                    question_id: Set(return_question.id),
+                    answer_content: Set(a.content),
+                    is_answer: Set(a.is_answer),
+                    ..Default::default()
+                }
+            })
+            .collect::<Vec<quiz_question_answers::ActiveModel>>();
+
+        let return_answers = QuizQuestionAnswers::insert_many(answer_active_models)
+            .exec_with_returning_many(&conn)
+            .await
+            .map_err(Error::InsertFailed)?;
+
+        Ok((return_question, return_answers))
     }
 
     pub async fn update_one(
@@ -75,8 +97,22 @@ impl QuizQuestionService {
             updated = true;
         }
         if let Some(answers) = answers {
-            let value = serde_json::to_value(answers).map_err(|e| Error::Anyhow(e.into()))?;
-            quiz_question.answers = Set(value);
+            let txn = conn.begin().await.map_err(|e| Error::Anyhow(e.into()))?;
+
+            for answer in answers.into_iter() {
+                quiz_question_answers::ActiveModel {
+                    id: Set(answer.id),
+                    answer_content: Set(answer.content),
+                    is_answer: Set(answer.is_answer),
+                    ..Default::default()
+                }
+                .update(&txn)
+                .await
+                .map_err(Error::UpdateFailed)?;
+            }
+
+            txn.rollback().await.map_err(Error::UpdateFailed)?;
+
             updated = true;
         }
 
