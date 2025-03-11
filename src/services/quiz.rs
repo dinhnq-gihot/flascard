@@ -31,6 +31,9 @@ impl QuizService {
             question_counts,
         } = payload;
 
+        let question_counts =
+            serde_json::to_value(question_counts).map_err(|e| Error::Anyhow(e.into()))?;
+
         quizes::ActiveModel {
             set_id: Set(created_from),
             creator_id: Set(creator_id),

@@ -1,8 +1,11 @@
 use crate::{
-    entities::sea_orm_active_enums::QuestionTypeEnum, models::quiz_question::CreateQuizAnswer,
+    entities::sea_orm_active_enums::QuestionTypeEnum, models::quiz_question::QuizQuestionAnswer,
 };
 
-pub fn validate_answer(question_type: &QuestionTypeEnum, answers: &Vec<CreateQuizAnswer>) -> bool {
+pub fn validate_answer(
+    question_type: &QuestionTypeEnum,
+    answers: &Vec<QuizQuestionAnswer>,
+) -> bool {
     match question_type {
         QuestionTypeEnum::CheckBoxes => {
             // CheckBoxes must have exactly one correct answer
@@ -17,4 +20,13 @@ pub fn validate_answer(question_type: &QuestionTypeEnum, answers: &Vec<CreateQui
             answers.len() == 1 && answers[0].is_answer
         }
     }
+}
+
+pub fn all_quiz_answers_contain_id(answers: &Vec<QuizQuestionAnswer>) -> bool {
+    for a in answers.iter() {
+        if a.id.is_none() {
+            return false;
+        }
+    }
+    true
 }

@@ -7,7 +7,6 @@ use {
         },
         enums::error::*,
         models::quiz_question::{CreateQuizQuestionRequest, UpdateQuizQuestionRequest},
-        utils::validator::validate_answer,
     },
     sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set, TransactionTrait},
     std::sync::Arc,
@@ -36,6 +35,9 @@ impl QuizQuestionService {
             r#type,
             question_id,
         } = payload;
+
+        // check not exceed type in question_counts in quiz
+        // TODO
 
         let return_question = quiz_questions::ActiveModel {
             quiz_id: Set(quiz_id),
@@ -92,6 +94,7 @@ impl QuizQuestionService {
         } = payload;
 
         let mut updated = false;
+        // if question_content is some => Set question_content
         if let Some(question_content) = question_content {
             quiz_question.question_content = Set(question_content);
             updated = true;
@@ -101,7 +104,7 @@ impl QuizQuestionService {
 
             for answer in answers.into_iter() {
                 quiz_question_answers::ActiveModel {
-                    id: Set(answer.id),
+                    id: Set(answer.id.unwrap()),
                     answer_content: Set(answer.content),
                     is_answer: Set(answer.is_answer),
                     ..Default::default()

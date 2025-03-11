@@ -5,7 +5,8 @@ use {
 };
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct CreateQuizAnswer {
+pub struct QuizQuestionAnswer {
+    pub id: Option<Uuid>,
     pub content: String,
     pub is_answer: bool,
 }
@@ -13,20 +14,19 @@ pub struct CreateQuizAnswer {
 #[derive(Debug, Deserialize)]
 pub struct CreateQuizQuestionRequest {
     pub question_content: String,
-    pub answers: Vec<CreateQuizAnswer>,
+    pub answers: Vec<QuizQuestionAnswer>,
     pub r#type: QuestionTypeEnum,
     pub question_id: Uuid,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct UpdateQuizQuestionAnswer {
-    pub id: Uuid,
-    pub content: String,
-    pub is_answer: bool,
-}
+// #[derive(Debug, Deserialize, Serialize)]
+// pub struct UpdateQuizQuestionAnswer {
+//     pub content: String,
+//     pub is_answer: bool,
+// }
 
 #[derive(Debug, Deserialize)]
 pub struct UpdateQuizQuestionRequest {
     pub question_content: Option<String>,
-    pub answers: Option<Vec<UpdateQuizQuestionAnswer>>,
+    pub answers: Option<Vec<QuizQuestionAnswer>>,
 }

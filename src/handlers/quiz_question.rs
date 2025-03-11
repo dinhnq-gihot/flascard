@@ -3,7 +3,10 @@ use {
         enums::{error::*, generic::into_ok_response},
         models::quiz_question::{CreateQuizQuestionRequest, UpdateQuizQuestionRequest},
         server::AppState,
-        utils::{jwt::Claims, validator::validate_answer},
+        utils::{
+            jwt::Claims,
+            validator::{all_quiz_answers_contain_id, validate_answer},
+        },
     },
     axum::{
         extract::{Path, State},
@@ -52,8 +55,10 @@ impl QuizQuestionHandler {
         if quiz.is_published {
             return Err(Error::PermissionDenied);
         }
-        if let Some(answer) = &payload.answers {
-            if !validate_answer(&quiz_question.r#type, answer) {
+        if let Some(answers) = &payload.answers {
+            if !validate_answer(&quiz_question.r#type, answers)
+                || !all_quiz_answers_contain_id(answers)
+            {
                 return Err(Error::InvalidAnswer);
             }
         }
