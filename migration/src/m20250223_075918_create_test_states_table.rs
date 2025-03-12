@@ -1,5 +1,8 @@
 use {
-    crate::m20250223_075910_create_tests_table::Tests,
+    crate::{
+        m20250223_071935_create_quiz_questions_table::QuizQuestions,
+        m20250223_075910_create_tests_table::Tests,
+    },
     sea_orm_migration::{
         prelude::{extension::postgres::Type, *},
         schema::*,
@@ -29,7 +32,7 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(pk_uuid(TestStates::Id).default(Expr::cust("uuid_generate_v4()")))
                     .col(uuid(TestStates::TestId))
-                    .col(unsigned(TestStates::CurrentQuizQuestion))
+                    .col(uuid_null(TestStates::CurrentQuizQuestion))
                     .col(unsigned(TestStates::RemainingTime))
                     .col(unsigned(TestStates::CompletedQuestions))
                     .foreign_key(
@@ -37,6 +40,13 @@ impl MigrationTrait for Migration {
                             .name("fk_test_states_test_id")
                             .from(TestStates::Table, TestStates::TestId)
                             .to(Tests::Table, Tests::Id)
+                            .on_delete(ForeignKeyAction::Restrict),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk_test_states_quiz_question_id")
+                            .from(TestStates::Table, TestStates::CurrentQuizQuestion)
+                            .to(Tests::Table, QuizQuestions::Id)
                             .on_delete(ForeignKeyAction::Restrict),
                     )
                     .to_owned(),

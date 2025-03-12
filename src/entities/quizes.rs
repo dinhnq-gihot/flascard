@@ -12,6 +12,7 @@ pub struct Model {
     pub id: Uuid,
     pub set_id: Uuid,
     pub creator_id: Uuid,
+    pub name: String,
     pub public_or_not: bool,
     pub question_counts: Json,
     pub is_published: bool,

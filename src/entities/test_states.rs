@@ -11,7 +11,7 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
     pub test_id: Uuid,
-    pub current_quiz_question: i32,
+    pub current_quiz_question: Option<Uuid>,
     pub remaining_time: i32,
     pub completed_questions: i32,
 }
@@ -20,18 +20,20 @@ pub struct Model {
 pub enum Relation {
     #[sea_orm(
         belongs_to = "super::tests::Entity",
+        from = "Column::CurrentQuizQuestion",
+        to = "super::tests::Column::Id",
+        on_update = "NoAction",
+        on_delete = "Restrict"
+    )]
+    Tests2,
+    #[sea_orm(
+        belongs_to = "super::tests::Entity",
         from = "Column::TestId",
         to = "super::tests::Column::Id",
         on_update = "NoAction",
         on_delete = "Restrict"
     )]
-    Tests,
-}
-
-impl Related<super::tests::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Tests.def()
-    }
+    Tests1,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

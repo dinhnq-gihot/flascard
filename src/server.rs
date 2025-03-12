@@ -7,7 +7,7 @@ use {
         routes::setup_routing,
         services::{
             prelude::*, quiz::QuizService, quiz_question::QuizQuestionService,
-            shared_quiz::SharedQuizService,
+            shared_quiz::SharedQuizService, test::TestService,
         },
     },
     std::sync::Arc,
@@ -24,6 +24,7 @@ pub struct AppState {
     pub quiz_service: Arc<QuizService>,
     pub quiz_question_service: Arc<QuizQuestionService>,
     pub shared_quiz_service: Arc<SharedQuizService>,
+    pub test_service: Arc<TestService>,
 }
 
 impl AppState {
@@ -41,6 +42,7 @@ impl AppState {
             quiz_service: Arc::new(QuizService::new(Arc::clone(&db))),
             quiz_question_service: Arc::new(QuizQuestionService::new(Arc::clone(&db))),
             shared_quiz_service: Arc::new(SharedQuizService::new(Arc::clone(&db))),
+            test_service: Arc::new(TestService::new(Arc::clone(&db))),
         })
     }
 }

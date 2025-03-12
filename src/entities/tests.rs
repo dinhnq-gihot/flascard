@@ -12,12 +12,13 @@ pub struct Model {
     pub id: Uuid,
     pub quiz_id: Uuid,
     pub user_id: Uuid,
-    pub score: i32,
+    pub score: Option<i32>,
     pub submitted: bool,
-    pub started_at: DateTime,
-    pub submitted_at: DateTime,
+    pub started_at: Option<DateTime>,
+    pub submitted_at: Option<DateTime>,
     pub duration: i32,
     pub total_question: i32,
+    pub created_at: DateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -32,8 +33,6 @@ pub enum Relation {
     Quizes,
     #[sea_orm(has_many = "super::test_results::Entity")]
     TestResults,
-    #[sea_orm(has_many = "super::test_states::Entity")]
-    TestStates,
     #[sea_orm(
         belongs_to = "super::users::Entity",
         from = "Column::UserId",
@@ -53,12 +52,6 @@ impl Related<super::quizes::Entity> for Entity {
 impl Related<super::test_results::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::TestResults.def()
-    }
-}
-
-impl Related<super::test_states::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::TestStates.def()
     }
 }
 

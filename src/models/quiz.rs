@@ -12,6 +12,7 @@ pub struct QuestionCounts {
 
 #[derive(Debug, Deserialize)]
 pub struct CreateQuizRequest {
+    pub name: Option<String>,
     pub created_from: Uuid,
     pub is_public: bool,
     pub question_counts: QuestionCounts,

@@ -26,6 +26,7 @@ impl QuizService {
     ) -> Result<quizes::Model> {
         let conn = self.db.get_connection().await;
         let CreateQuizRequest {
+            name,
             created_from,
             is_public,
             question_counts,
@@ -35,6 +36,7 @@ impl QuizService {
             serde_json::to_value(question_counts).map_err(|e| Error::Anyhow(e.into()))?;
 
         quizes::ActiveModel {
+            name: Set(name.unwrap_or("Untitled Quiz".to_string())),
             set_id: Set(created_from),
             creator_id: Set(creator_id),
             public_or_not: Set(is_public),

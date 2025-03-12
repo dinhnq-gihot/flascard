@@ -1,6 +1,7 @@
-use sea_orm_migration::{prelude::*, schema::*};
-
-use crate::{m20250223_061404_create_users_table::Users, m20250223_064318_create_sets_table::Sets};
+use {
+    crate::{m20250223_061404_create_users_table::Users, m20250223_064318_create_sets_table::Sets},
+    sea_orm_migration::{prelude::*, schema::*},
+};
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -16,6 +17,7 @@ impl MigrationTrait for Migration {
                     .col(pk_uuid(Quizes::Id).default(Expr::cust("uuid_generate_v4()")))
                     .col(uuid(Quizes::SetId))
                     .col(uuid(Quizes::CreatorId))
+                    .col(string(Quizes::Name))
                     .col(boolean(Quizes::PublicOrNot).default(false))
                     .col(json(Quizes::QuestionCounts))
                     .col(boolean(Quizes::IsPublished).default(false))
@@ -54,6 +56,7 @@ pub enum Quizes {
     Id,
     SetId,
     CreatorId,
+    Name,
     PublicOrNot,
     QuestionCounts,
     IsPublished,

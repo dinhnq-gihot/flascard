@@ -1,7 +1,8 @@
 use {
     crate::{
         db::db_connection::Database,
-        entities::{prelude::Tests, tests},
+        entities::{prelude::Tests, test_states, tests},
+        enums::{error::*, generic::PaginatedResponse},
     },
     std::sync::Arc,
     uuid::Uuid,
@@ -16,10 +17,30 @@ impl TestService {
         Self { db }
     }
 
-    
-    pub async fn create(&self, quiz_id: Uuid) {}
-
-    pub async fn get_one() {
-        
+    pub async fn create_one(&self, quiz_id: Uuid, max_duration: u64) -> Result<()> {
+        Ok(())
     }
+
+    pub async fn get_all(&self) -> Result<PaginatedResponse<>> {
+        Ok(())
+    }
+
+    pub async fn get_one(&self, test_id: Uuid) -> Result<(tests::Model, test_states::Model)> {
+        // Ok(())
+        !unimplemented!()
+    }
+
+    pub async fn start(&self, test_id: Uuid) -> Result<()> {
+        Ok(())
+    }
+
+    pub async fn get_all_test_questions(&self, test_id: Uuid) -> Result<()> {
+        Ok(())
+    }
+
+    pub async fn get_test_question(&self, test_id: Uuid, question_id: Uuid) -> Result<()> {
+        Ok(())
+    }
+
+    // pub async fn answer_
 }

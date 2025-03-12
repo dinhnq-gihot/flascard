@@ -19,12 +19,13 @@ impl MigrationTrait for Migration {
                     .col(pk_uuid(Tests::Id).default(Expr::cust("uuid_generate_v4()")))
                     .col(uuid(Tests::QuizId))
                     .col(uuid(Tests::UserId))
-                    .col(integer(Tests::Score).default(0))
+                    .col(unsigned_null(Tests::Score))
                     .col(boolean(Tests::Submitted).default(false))
-                    .col(timestamp(Tests::StartedAt))
-                    .col(timestamp(Tests::SubmittedAt))
+                    .col(timestamp_null(Tests::StartedAt))
+                    .col(timestamp_null(Tests::SubmittedAt))
                     .col(unsigned(Tests::Duration)) // Duration in seconds
                     .col(unsigned(Tests::TotalQuestion))
+                    .col(timestamp(Tests::CreatedAt).default(Expr::current_timestamp()))
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk_tests_quiz_id")
@@ -63,4 +64,5 @@ pub enum Tests {
     SubmittedAt,
     Duration,
     TotalQuestion,
+    CreatedAt,
 }

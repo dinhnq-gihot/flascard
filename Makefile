@@ -2,7 +2,7 @@ run-db:
 	docker-compose -f docker/docker-compose.yaml up db pgadmin -d
 
 down-db:
-	docker-compose -f docker/docker-compose.yaml down db pgadmin -d
+	docker-compose -f docker/docker-compose.yaml down db pgadmin
 
 run-flashcard:
 	RUST_BACKTRACE=full RUST_LOG=trace,hyper=info${RUST_LOG} cargo run --bin flashcard
