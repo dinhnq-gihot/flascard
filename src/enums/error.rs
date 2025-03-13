@@ -30,6 +30,8 @@ pub enum Error {
     LoginFailed,
     #[error("Permission Denied: User does not have the required role.")]
     PermissionDenied,
+    #[error("Database Error: {0}")]
+    DbError(#[source] DbErr),
 
     // File errors
     #[error("Create file failed")]

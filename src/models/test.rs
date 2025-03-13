@@ -11,6 +11,15 @@ pub struct CreateTest {
 }
 
 #[derive(Debug, Serialize)]
+pub struct CreateTestResponse {
+    pub id: Uuid,
+    pub max_duration: i32,
+    pub quiz: TestingQuiz,
+    pub status: String,
+    pub created_at: NaiveDateTime,
+}
+
+#[derive(Debug, Serialize)]
 pub struct TestingQuiz {
     pub id: Uuid,
     pub name: String,
@@ -37,4 +46,12 @@ pub struct TestModel {
     pub max_duration: i32,
     pub remaining_time: i32,
     pub current_state: Option<CurrentTestState>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct QueryTestParams {
+    pub sort_by: Option<String>,
+    pub sort_direction: Option<String>,
+    pub page: Option<u64>,
+    pub page_size: Option<u64>,
 }

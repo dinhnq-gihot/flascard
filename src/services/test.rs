@@ -3,6 +3,7 @@ use {
         db::db_connection::Database,
         entities::{prelude::Tests, test_states, tests},
         enums::{error::*, generic::PaginatedResponse},
+        models::test::QueryTestParams,
     },
     std::sync::Arc,
     uuid::Uuid,
@@ -17,12 +18,15 @@ impl TestService {
         Self { db }
     }
 
-    pub async fn create_one(&self, quiz_id: Uuid, max_duration: u64) -> Result<()> {
-        Ok(())
+    pub async fn create_one(&self, quiz_id: Uuid, max_duration: u64) -> Result<tests::Model> {
+        !unimplemented!()
     }
 
-    pub async fn get_all(&self) -> Result<PaginatedResponse<>> {
-        Ok(())
+    pub async fn get_all(
+        &self,
+        params: QueryTestParams,
+    ) -> Result<PaginatedResponse<(tests::Model, test_states::Model)>> {
+        !unimplemented!()
     }
 
     pub async fn get_one(&self, test_id: Uuid) -> Result<(tests::Model, test_states::Model)> {

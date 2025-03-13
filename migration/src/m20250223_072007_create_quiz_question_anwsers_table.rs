@@ -43,7 +43,7 @@ impl MigrationTrait for Migration {
                             .name("fk_quiz_question_answers_question_id")
                             .from(QuizQuestionAnswers::Table, QuizQuestionAnswers::QuestionId)
                             .to(Questions::Table, Questions::Id)
-                            .on_delete(ForeignKeyAction::Restrict),
+                            .on_delete(ForeignKeyAction::SetNull),
                     )
                     .to_owned(),
             )

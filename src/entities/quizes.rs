@@ -15,6 +15,8 @@ pub struct Model {
     pub name: String,
     pub public_or_not: bool,
     pub question_counts: Json,
+    pub start_question: Option<Uuid>,
+    pub last_question: Option<Uuid>,
     pub is_published: bool,
     pub created_at: DateTime,
     pub updated_at: DateTime,
@@ -25,8 +27,22 @@ pub struct Model {
 pub enum Relation {
     #[sea_orm(has_many = "super::quiz_question_answers::Entity")]
     QuizQuestionAnswers,
-    #[sea_orm(has_many = "super::quiz_questions::Entity")]
-    QuizQuestions,
+    #[sea_orm(
+        belongs_to = "super::quiz_questions::Entity",
+        from = "Column::LastQuestion",
+        to = "super::quiz_questions::Column::Id",
+        on_update = "NoAction",
+        on_delete = "SetNull"
+    )]
+    QuizQuestions2,
+    #[sea_orm(
+        belongs_to = "super::quiz_questions::Entity",
+        from = "Column::StartQuestion",
+        to = "super::quiz_questions::Column::Id",
+        on_update = "NoAction",
+        on_delete = "SetNull"
+    )]
+    QuizQuestions1,
     #[sea_orm(
         belongs_to = "super::sets::Entity",
         from = "Column::SetId",
@@ -52,12 +68,6 @@ pub enum Relation {
 impl Related<super::quiz_question_answers::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::QuizQuestionAnswers.def()
-    }
-}
-
-impl Related<super::quiz_questions::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::QuizQuestions.def()
     }
 }
 

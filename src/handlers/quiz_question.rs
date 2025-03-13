@@ -1,7 +1,10 @@
 use {
     crate::{
         enums::{error::*, generic::into_ok_response},
-        models::quiz_question::{CreateQuizQuestionRequest, UpdateQuizQuestionRequest},
+        models::{
+            quiz::UpdateQuizRequest,
+            quiz_question::{CreateQuizQuestionRequest, UpdateQuizQuestionRequest},
+        },
         server::AppState,
         utils::{
             jwt::Claims,
@@ -26,11 +29,27 @@ impl QuizQuestionHandler {
         Json(payload): Json<CreateQuizQuestionRequest>,
     ) -> Result<impl IntoResponse> {
         let service = Arc::clone(&state.quiz_question_service);
+        let quiz_service = Arc::clone(&state.quiz_service);
 
         if !validate_answer(&payload.r#type, &payload.answers) {
             return Err(Error::InvalidAnswer);
         }
-        let res = service.create_one(quiz_id, payload).await?;
+        let quiz = quiz_service.get_by_id(quiz_id).await?;
+
+        let res = service
+            .create_one(quiz_id, quiz.last_question, payload)
+            .await?;
+
+        quiz_service
+            .update_one(
+                quiz.id,
+                UpdateQuizRequest {
+                    is_public: None,
+                    publish: None,
+                    last_question_id: Some(res.0.id),
+                },
+            )
+            .await?;
         Ok(into_ok_response("Created successfully".into(), Some(res)))
     }
 

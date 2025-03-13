@@ -25,6 +25,7 @@ impl QuizQuestionService {
     pub async fn create_one(
         &self,
         quiz_id: Uuid,
+        last_question_id: Option<Uuid>,
         payload: CreateQuizQuestionRequest,
     ) -> Result<(quiz_questions::Model, Vec<quiz_question_answers::Model>)> {
         let conn = self.db.get_connection().await;
@@ -33,7 +34,6 @@ impl QuizQuestionService {
             question_content,
             answers,
             r#type,
-            question_id,
         } = payload;
 
         // check not exceed type in question_counts in quiz
@@ -41,14 +41,30 @@ impl QuizQuestionService {
 
         let return_question = quiz_questions::ActiveModel {
             quiz_id: Set(quiz_id),
-            question_id: Set(question_id),
             question_content: Set(question_content),
             r#type: Set(r#type),
+            previous_question: Set(last_question_id),
             ..Default::default()
         }
         .insert(&conn)
         .await
         .map_err(Error::InsertFailed)?;
+
+        // update next_id for last question if is some
+        if let Some(last_question_id) = last_question_id {
+            let mut last_question: quiz_questions::ActiveModel =
+                QuizQuestions::find_by_id(last_question_id)
+                    .one(&conn)
+                    .await
+                    .map_err(Error::QueryFailed)?
+                    .ok_or(Error::RecordNotFound)?
+                    .into();
+            last_question.next_question = Set(Some(return_question.id));
+            last_question
+                .update(&conn)
+                .await
+                .map_err(Error::UpdateFailed)?;
+        }
 
         let answer_active_models = answers
             .into_iter()
@@ -100,6 +116,7 @@ impl QuizQuestionService {
             updated = true;
         }
         if let Some(answers) = answers {
+            // create transactions for updating answers
             let txn = conn.begin().await.map_err(|e| Error::Anyhow(e.into()))?;
 
             for answer in answers.into_iter() {

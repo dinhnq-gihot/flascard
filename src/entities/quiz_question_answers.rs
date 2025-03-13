@@ -27,7 +27,7 @@ pub enum Relation {
         from = "Column::QuestionId",
         to = "super::questions::Column::Id",
         on_update = "NoAction",
-        on_delete = "Restrict"
+        on_delete = "SetNull"
     )]
     Questions,
     #[sea_orm(

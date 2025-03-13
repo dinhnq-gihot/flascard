@@ -12,10 +12,11 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
     pub quiz_id: Uuid,
-    pub question_id: Uuid,
     #[sea_orm(column_type = "Text")]
     pub question_content: String,
     pub r#type: QuestionTypeEnum,
+    pub next_question: Option<Uuid>,
+    pub previous_question: Option<Uuid>,
     pub created_at: DateTime,
     pub updated_at: DateTime,
     pub is_deleted: bool,
@@ -24,13 +25,21 @@ pub struct Model {
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
     #[sea_orm(
-        belongs_to = "super::questions::Entity",
-        from = "Column::QuestionId",
-        to = "super::questions::Column::Id",
+        belongs_to = "Entity",
+        from = "Column::NextQuestion",
+        to = "Column::Id",
         on_update = "NoAction",
-        on_delete = "Restrict"
+        on_delete = "SetNull"
     )]
-    Questions,
+    SelfRef2,
+    #[sea_orm(
+        belongs_to = "Entity",
+        from = "Column::PreviousQuestion",
+        to = "Column::Id",
+        on_update = "NoAction",
+        on_delete = "SetNull"
+    )]
+    SelfRef1,
     #[sea_orm(
         belongs_to = "super::quizes::Entity",
         from = "Column::QuizId",
@@ -41,12 +50,6 @@ pub enum Relation {
     Quizes,
     #[sea_orm(has_many = "super::test_results::Entity")]
     TestResults,
-}
-
-impl Related<super::questions::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Questions.def()
-    }
 }
 
 impl Related<super::quizes::Entity> for Entity {

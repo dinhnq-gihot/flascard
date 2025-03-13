@@ -16,7 +16,6 @@ pub struct CreateQuizQuestionRequest {
     pub question_content: String,
     pub answers: Vec<QuizQuestionAnswer>,
     pub r#type: QuestionTypeEnum,
-    pub question_id: Uuid,
 }
 
 // #[derive(Debug, Deserialize, Serialize)]

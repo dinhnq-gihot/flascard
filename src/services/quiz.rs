@@ -54,25 +54,39 @@ impl QuizService {
         payload: UpdateQuizRequest,
     ) -> Result<Option<quizes::Model>> {
         let conn = self.db.get_connection().await;
-        let mut quiz: quizes::ActiveModel = Quizes::find_by_id(id)
+        let quiz = Quizes::find_by_id(id)
             .one(&conn)
             .await
             .map_err(Error::QueryFailed)?
-            .ok_or(Error::RecordNotFound)?
-            .into();
+            .ok_or(Error::RecordNotFound)?;
+
+        let mut active_model: quizes::ActiveModel = quiz.clone().into();
 
         let mut updated = false;
         if let Some(p) = payload.is_public {
-            quiz.is_published = Set(p);
+            active_model.is_published = Set(p);
             updated = true;
         }
         if let Some(publish) = payload.publish {
-            quiz.is_published = Set(publish);
+            active_model.is_published = Set(publish);
+            updated = true;
+        }
+        // update new last question and set start question if is none
+        if let Some(last_question_id) = payload.last_question_id {
+            active_model.last_question = Set(Some(last_question_id));
+            if quiz.start_question.is_none() {
+                active_model.start_question = Set(Some(last_question_id));
+            }
             updated = true;
         }
 
         if updated {
-            Ok(Some(quiz.update(&conn).await.map_err(Error::UpdateFailed)?))
+            Ok(Some(
+                active_model
+                    .update(&conn)
+                    .await
+                    .map_err(Error::UpdateFailed)?,
+            ))
         } else {
             Ok(None)
         }

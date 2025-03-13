@@ -23,6 +23,7 @@ pub struct CreateQuizRequest {
 pub struct UpdateQuizRequest {
     pub is_public: Option<bool>,
     pub publish: Option<bool>,
+    pub last_question_id: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize)]
