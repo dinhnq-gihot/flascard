@@ -14,7 +14,8 @@ pub struct Model {
     pub quiz_question_id: Uuid,
     #[sea_orm(column_type = "Text", nullable)]
     pub text_answer: Option<String>,
-    pub select_answer_ids: Option<Vec<Uuid>>,
+    pub selected_answer_ids: Option<Vec<Uuid>>,
+    pub is_resolved: bool,
     pub is_correct: Option<bool>,
     pub spent_time: i32,
 }

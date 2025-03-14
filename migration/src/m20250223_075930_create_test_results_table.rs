@@ -22,10 +22,11 @@ impl MigrationTrait for Migration {
                     .col(uuid(TestResults::QuizQuestionId))
                     .col(text_null(TestResults::TextAnswer)) // Changed to text type
                     .col(
-                        ColumnDef::new(TestResults::SelectAnswerIds)
+                        ColumnDef::new(TestResults::SelectedAnswerIds)
                             .array(ColumnType::Uuid)
                             .null(),
                     )
+                    .col(boolean(TestResults::IsResolved))
                     .col(boolean_null(TestResults::IsCorrect))
                     .col(unsigned(TestResults::SpentTime))
                     .foreign_key(
@@ -61,7 +62,8 @@ enum TestResults {
     TestId,
     QuizQuestionId,
     TextAnswer,
-    SelectAnswerIds,
+    SelectedAnswerIds,
+    IsResolved,
     IsCorrect,
     SpentTime,
 }

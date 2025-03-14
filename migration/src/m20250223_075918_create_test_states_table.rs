@@ -32,7 +32,7 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(pk_uuid(TestStates::Id).default(Expr::cust("uuid_generate_v4()")))
                     .col(uuid(TestStates::TestId))
-                    .col(uuid_null(TestStates::CurrentQuizQuestion))
+                    .col(uuid(TestStates::CurrentQuizQuestion))
                     .col(unsigned(TestStates::RemainingTime))
                     .col(unsigned(TestStates::CompletedQuestions))
                     .foreign_key(

@@ -64,7 +64,7 @@ impl QuizQuestionHandler {
         let quiz_service = Arc::clone(&state.quiz_service);
 
         let quiz = quiz_service.get_by_id(quiz_id).await?;
-        let quiz_question = quiz_question_service
+        let (quiz_question, _) = quiz_question_service
             .get_by_id(quiz_question_id, quiz_id)
             .await?;
 

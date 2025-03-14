@@ -11,7 +11,7 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
     pub test_id: Uuid,
-    pub current_quiz_question: Option<Uuid>,
+    pub current_quiz_question: Uuid,
     pub remaining_time: i32,
     pub completed_questions: i32,
 }

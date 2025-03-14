@@ -1,9 +1,9 @@
 use {
     crate::{
         db::db_connection::Database,
-        entities::{prelude::Tests, test_states, tests},
+        entities::{prelude::Tests, test_results, test_states, tests},
         enums::{error::*, generic::PaginatedResponse},
-        models::test::QueryTestParams,
+        models::test::{QueryTestParams, ResolveTestingQuestion, UpdateTestParams},
     },
     std::sync::Arc,
     uuid::Uuid,
@@ -34,6 +34,14 @@ impl TestService {
         !unimplemented!()
     }
 
+    pub async fn update_one(
+        &self,
+        test_id: Uuid,
+        params: UpdateTestParams,
+    ) -> Result<(tests::Model, test_states::Model)> {
+        !unimplemented!()
+    }
+
     pub async fn start(&self, test_id: Uuid) -> Result<()> {
         Ok(())
     }
@@ -42,9 +50,20 @@ impl TestService {
         Ok(())
     }
 
-    pub async fn get_test_question(&self, test_id: Uuid, question_id: Uuid) -> Result<()> {
-        Ok(())
+    pub async fn get_test_question_result(
+        &self,
+        test_id: Uuid,
+        quiz_question_id: Uuid,
+    ) -> Result<Option<test_results::Model>> {
+        !unimplemented!()
     }
 
-    // pub async fn answer_
+    pub async fn create_test_question_result(
+        &self,
+        test_id: Uuid,
+        quiz_question_id: Uuid,
+        payload: ResolveTestingQuestion,
+    ) -> Result<i32> {
+        !unimplemented!()
+    }
 }

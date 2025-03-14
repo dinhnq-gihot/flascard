@@ -34,6 +34,7 @@ impl QuizQuestionService {
             question_content,
             answers,
             r#type,
+            question_id,
         } = payload;
 
         // check not exceed type in question_counts in quiz
@@ -44,6 +45,7 @@ impl QuizQuestionService {
             question_content: Set(question_content),
             r#type: Set(r#type),
             previous_question: Set(last_question_id),
+            question_id: Set(question_id),
             ..Default::default()
         }
         .insert(&conn)
@@ -70,8 +72,7 @@ impl QuizQuestionService {
             .into_iter()
             .map(|a| {
                 quiz_question_answers::ActiveModel {
-                    quiz_id: Set(quiz_id),
-                    question_id: Set(return_question.id),
+                    quiz_question_id: Set(return_question.id),
                     answer_content: Set(a.content),
                     is_answer: Set(a.is_answer),
                     ..Default::default()
@@ -148,16 +149,28 @@ impl QuizQuestionService {
         }
     }
 
-    pub async fn get_by_id(&self, id: Uuid, quiz_id: Uuid) -> Result<quiz_questions::Model> {
+    pub async fn get_by_id(
+        &self,
+        id: Uuid,
+        quiz_id: Uuid,
+    ) -> Result<(quiz_questions::Model, Vec<quiz_question_answers::Model>)> {
         let conn = self.db.get_connection().await;
 
-        QuizQuestions::find_by_id(id)
+        let quiz_question = QuizQuestions::find_by_id(id)
             .filter(quiz_questions::Column::IsDeleted.eq(false))
             .filter(quiz_questions::Column::QuizId.eq(quiz_id))
             .one(&conn)
             .await
             .map_err(Error::QueryFailed)?
-            .ok_or(Error::RecordNotFound)
+            .ok_or(Error::RecordNotFound)?;
+
+        let quiz_question_answers = QuizQuestionAnswers::find()
+            .filter(quiz_question_answers::Column::QuizQuestionId.eq(quiz_question.id))
+            .all(&conn)
+            .await
+            .map_err(Error::QueryFailed)?;
+
+        Ok((quiz_question, quiz_question_answers))
     }
 
     pub async fn get_all(&self, quiz_id: Uuid) -> Result<Vec<quiz_questions::Model>> {

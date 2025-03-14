@@ -1,4 +1,5 @@
 use {
+    crate::entities::{quiz_question_answers, sea_orm_active_enums::QuestionTypeEnum},
     chrono::NaiveDateTime,
     serde::{Deserialize, Serialize},
     uuid::Uuid,
@@ -29,7 +30,7 @@ pub struct TestingQuiz {
 
 #[derive(Debug, Serialize)]
 pub struct CurrentTestState {
-    pub current_question_id: Option<Uuid>,
+    pub current_question_id: Uuid,
     pub completed_questions: i32,
     pub spent_time_in_second: i32,
 }
@@ -51,7 +52,62 @@ pub struct TestModel {
 #[derive(Debug, Deserialize)]
 pub struct QueryTestParams {
     pub sort_by: Option<String>,
-    pub sort_direction: Option<String>,
+    pub sort_order: Option<String>,
     pub page: Option<u64>,
     pub page_size: Option<u64>,
+}
+
+pub struct UpdateTestParams {
+    pub started_at: Option<NaiveDateTime>,
+    pub submitted_at: Option<NaiveDateTime>,
+    pub resolved_count: Option<i32>,
+    pub remaining_time: Option<i32>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TestingAnswer {
+    pub id: Uuid,
+    pub content: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TestingQuestion {
+    pub id: Uuid,
+    pub content: String,
+    pub r#type: QuestionTypeEnum,
+    pub answers: Vec<TestingAnswer>,
+    pub text_answer: Option<String>,
+    pub selected_answer_ids: Option<Vec<Uuid>>,
+    pub spent_time_in_second: i32,
+    pub next_question_id: Option<Uuid>,
+    pub previous_question_id: Option<Uuid>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct StartTestResponse {
+    pub id: Uuid,
+    pub started_at: NaiveDateTime,
+    pub current_question: TestingQuestion,
+    pub remainning_time: i32,
+}
+
+impl From<quiz_question_answers::Model> for TestingAnswer {
+    fn from(value: quiz_question_answers::Model) -> Self {
+        Self {
+            id: value.id,
+            content: value.answer_content,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ResolveTestingQuestion {
+    pub selected_answer_ids: Option<Vec<Uuid>>,
+    pub text_answer: Option<String>,
+    pub remainning_time: i32,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ResolveResponse {
+    pub next_question_id: Option<Uuid>,
 }

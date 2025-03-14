@@ -20,7 +20,6 @@ impl MigrationTrait for Migration {
                     .col(uuid(Tests::QuizId))
                     .col(uuid(Tests::UserId))
                     .col(unsigned_null(Tests::Score))
-                    .col(boolean(Tests::Submitted).default(false))
                     .col(timestamp_null(Tests::StartedAt))
                     .col(timestamp_null(Tests::SubmittedAt))
                     .col(unsigned(Tests::Duration)) // Duration in seconds
@@ -59,7 +58,6 @@ pub enum Tests {
     QuizId,
     UserId,
     Score,
-    Submitted,
     StartedAt,
     SubmittedAt,
     Duration,

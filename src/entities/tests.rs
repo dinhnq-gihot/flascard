@@ -13,7 +13,6 @@ pub struct Model {
     pub quiz_id: Uuid,
     pub user_id: Uuid,
     pub score: Option<i32>,
-    pub submitted: bool,
     pub started_at: Option<DateTime>,
     pub submitted_at: Option<DateTime>,
     pub duration: i32,

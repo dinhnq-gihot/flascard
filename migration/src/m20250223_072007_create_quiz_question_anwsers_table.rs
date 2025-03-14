@@ -1,8 +1,5 @@
 use {
-    crate::{
-        m20250223_065024_create_questions_table::Questions,
-        m20250223_070735_create_quizes_table::Quizes,
-    },
+    crate::m20250223_071935_create_quiz_questions_table::QuizQuestions,
     sea_orm_migration::{prelude::*, schema::*},
 };
 
@@ -18,8 +15,7 @@ impl MigrationTrait for Migration {
                     .table(QuizQuestionAnswers::Table)
                     .if_not_exists()
                     .col(pk_uuid(QuizQuestionAnswers::Id).default(Expr::cust("uuid_generate_v4()")))
-                    .col(uuid(QuizQuestionAnswers::QuizId))
-                    .col(uuid(QuizQuestionAnswers::QuestionId))
+                    .col(uuid(QuizQuestionAnswers::QuizQuestionId))
                     .col(text(QuizQuestionAnswers::AnswerContent))
                     .col(boolean(QuizQuestionAnswers::IsAnswer))
                     .col(
@@ -33,17 +29,13 @@ impl MigrationTrait for Migration {
                     .col(boolean(QuizQuestionAnswers::IsDeleted).default(false))
                     .foreign_key(
                         ForeignKey::create()
-                            .name("fk_quiz_question_answers_quiz_id")
-                            .from(QuizQuestionAnswers::Table, QuizQuestionAnswers::QuizId)
-                            .to(Quizes::Table, Quizes::Id)
-                            .on_delete(ForeignKeyAction::Restrict),
-                    )
-                    .foreign_key(
-                        ForeignKey::create()
-                            .name("fk_quiz_question_answers_question_id")
-                            .from(QuizQuestionAnswers::Table, QuizQuestionAnswers::QuestionId)
-                            .to(Questions::Table, Questions::Id)
-                            .on_delete(ForeignKeyAction::SetNull),
+                            .name("fk_quiz_question_answers_to_quiz_question_id")
+                            .from(
+                                QuizQuestionAnswers::Table,
+                                QuizQuestionAnswers::QuizQuestionId,
+                            )
+                            .to(QuizQuestions::Table, QuizQuestions::Id)
+                            .on_delete(ForeignKeyAction::Cascade),
                     )
                     .to_owned(),
             )
@@ -61,8 +53,7 @@ impl MigrationTrait for Migration {
 enum QuizQuestionAnswers {
     Table,
     Id,
-    QuizId,
-    QuestionId,
+    QuizQuestionId,
     AnswerContent,
     IsAnswer,
     CreatedAt,

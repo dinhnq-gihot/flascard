@@ -1,6 +1,6 @@
 use {
     crate::{
-        m20250223_065024_create_questions_table::{QuestionType, QuestionTypeEnum},
+        m20250223_065024_create_questions_table::{QuestionType, QuestionTypeEnum, Questions},
         m20250223_070735_create_quizes_table::Quizes,
     },
     sea_orm_migration::{prelude::*, schema::*, sea_orm::Iterable},
@@ -19,6 +19,7 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(pk_uuid(QuizQuestions::Id).default(Expr::cust("uuid_generate_v4()")))
                     .col(uuid(QuizQuestions::QuizId))
+                    .col(uuid_null(QuizQuestions::QuestionId))
                     .col(text(QuizQuestions::QuestionContent))
                     .col(enumeration(
                         QuizQuestions::Type,
@@ -39,6 +40,13 @@ impl MigrationTrait for Migration {
                     )
                     .foreign_key(
                         ForeignKey::create()
+                            .name("fk_QuizQuestions_question_id")
+                            .from(QuizQuestions::Table, QuizQuestions::QuestionId)
+                            .to(Questions::Table, Questions::Id)
+                            .on_delete(ForeignKeyAction::SetNull),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
                             .from(QuizQuestions::Table, QuizQuestions::NextQuestion)
                             .to(QuizQuestions::Table, QuizQuestions::Id)
                             .on_delete(ForeignKeyAction::SetNull),
@@ -53,6 +61,8 @@ impl MigrationTrait for Migration {
             )
             .await?;
 
+        // Adding quiz_question_id foreign keys for quiz later to prevent dependency
+        // issues
         let fk_quizes_start_question_id = TableForeignKey::new()
             .name("fk_quizes_start_question_id")
             .from_tbl(Quizes::Table)
