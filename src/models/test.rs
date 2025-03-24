@@ -36,7 +36,7 @@ pub struct CurrentTestState {
 }
 
 #[derive(Debug, Serialize)]
-pub struct TestModel {
+pub struct TestResponse {
     pub id: Uuid,
     pub quiz: TestingQuiz,
     pub status: String,
@@ -60,6 +60,7 @@ pub struct QueryTestParams {
 pub struct UpdateTestParams {
     pub started_at: Option<NaiveDateTime>,
     pub submitted_at: Option<NaiveDateTime>,
+    pub current_testing_quiz_question: Option<Uuid>,
     pub resolved_count: Option<i32>,
     pub remaining_time: Option<i32>,
 }

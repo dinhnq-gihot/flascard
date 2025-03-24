@@ -1,6 +1,6 @@
 use {
     crate::{
-        handlers::{
+        controllers::{
             quiz::QuizHandler, quiz_question::QuizQuestionHandler, share_quiz::ShareQuizHandler,
         },
         middleware::jwt::check_jwt,

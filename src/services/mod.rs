@@ -7,3 +7,5 @@ pub mod question;
 pub mod quiz;
 pub mod quiz_question;
 pub mod shared_quiz;
+pub mod traits;
+pub mod implements;

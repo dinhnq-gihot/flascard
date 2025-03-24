@@ -1,25 +1,19 @@
 use {
     crate::{
         db::db_connection::Database,
-        entities::{prelude::Tests, test_results, test_states, tests},
+        entities::{test_results, test_states, tests},
         enums::{error::*, generic::PaginatedResponse},
         models::test::{QueryTestParams, ResolveTestingQuestion, UpdateTestParams},
-        repository::test::TestRepository,
     },
     std::sync::Arc,
     uuid::Uuid,
 };
 
-pub struct TestServiceImpl {
-    test_repository: Arc<dyn TestRepository>,
-}
-impl TestServiceImpl {
-    pub fn new(test_repository: Arc<dyn TestRepository>) -> Self {
-        Self { test_repository }
-    }
+pub struct TestRepository {
+    db: Arc<Database>,
 }
 
-impl TestServiceImpl {
+impl TestRepository {
     pub async fn create_one(&self, quiz_id: Uuid, max_duration: u64) -> Result<tests::Model> {
         !unimplemented!()
     }
@@ -42,14 +36,6 @@ impl TestServiceImpl {
         params: UpdateTestParams,
     ) -> Result<(tests::Model, test_states::Model)> {
         !unimplemented!()
-    }
-
-    pub async fn start(&self, test_id: Uuid) -> Result<()> {
-        Ok(())
-    }
-
-    pub async fn get_all_test_questions(&self, test_id: Uuid) -> Result<()> {
-        Ok(())
     }
 
     pub async fn get_test_question_result(

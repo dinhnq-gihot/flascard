@@ -1,5 +1,5 @@
 use {
-    crate::{handlers::fallback, server::AppState},
+    crate::{controllers::fallback, server::AppState},
     axum::{routing::get, Router},
     qna::{get_answer_router, get_question_router},
     quiz::quiz_router,

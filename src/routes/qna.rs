@@ -1,5 +1,5 @@
 use {
-    crate::{handlers::qna::*, middleware::jwt::check_jwt, server::AppState},
+    crate::{controllers::qna::*, middleware::jwt::check_jwt, server::AppState},
     axum::{
         middleware,
         routing::{get, patch},

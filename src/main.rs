@@ -8,13 +8,14 @@ use {
 };
 
 pub mod config;
+pub mod controllers;
 pub mod db;
 pub mod entities;
 pub mod enums;
-pub mod handlers;
 pub mod logger;
 pub mod middleware;
 pub mod models;
+pub mod repositories;
 pub mod routes;
 pub mod server;
 pub mod services;

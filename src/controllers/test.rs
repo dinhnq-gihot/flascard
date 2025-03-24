@@ -39,7 +39,7 @@ impl TestHandler {
             data,
         } = test_service.get_all(params).await?;
 
-        let mut res = Vec::<TestModel>::new();
+        let mut res = Vec::<TestResponse>::new();
 
         for (test, test_state) in data.into_iter() {
             let status = check_test_status(test.started_at, test.submitted_at);
@@ -47,7 +47,7 @@ impl TestHandler {
             let quiz = quiz_service.get_by_id(test.quiz_id).await?;
             let set = set_service.get_by_id(quiz.set_id).await?;
 
-            let test_info = TestModel {
+            let test_info = TestResponse {
                 id: test.id,
                 quiz: TestingQuiz {
                     id: quiz.id,
@@ -126,9 +126,12 @@ impl TestHandler {
         let quiz_service = Arc::clone(&state.quiz_service);
         let set_service = Arc::clone(&state.set_service);
 
+        // tạo 1 đối tượng Test với quiz_id và duration
         let test = test_service
             .create_one(payload.quiz_id, payload.max_duration)
             .await?;
+
+        // lấy quiz và set để trả về cho response
         let quiz = quiz_service.get_by_id(test.quiz_id).await?;
         let set = set_service.get_by_id(quiz.set_id).await?;
 
@@ -157,7 +160,10 @@ impl TestHandler {
 
         let now = chrono::Utc::now().naive_utc();
 
+        // Lấy test và test-state để làm
         let (test, test_state) = test_service.get_one(id).await?;
+
+        // Nếu test chưa được bắt đầu thì cập nhật trạng thái thành started
         if test.started_at.is_none() {
             // update state to started
             test_service
@@ -168,15 +174,18 @@ impl TestHandler {
                         submitted_at: None,
                         resolved_count: None,
                         remaining_time: None,
+                        current_testing_quiz_question: None,
                     },
                 )
                 .await?;
         }
 
-        // get response
+        // lấy câu hỏi quiz hiện tại trong test_state
         let (quiz_question, quiz_question_answers) = quiz_question_service
             .get_by_id(test_state.current_quiz_question, test.quiz_id)
             .await?;
+        // lấy câu trả lời của quiz ở trên nếu có => để trả về cho FE show kết quả user
+        // đã làm
         let test_question_result = test_service
             .get_test_question_result(test.id, quiz_question.id)
             .await?;
@@ -259,8 +268,8 @@ impl TestHandler {
         Ok(into_ok_response("Success".into(), Some(res)))
     }
 
-    // Khi ấn next/previous/thoát => chương trình lưu lại câu trả lời vào
-    // test_result và ghi lại trạng thái của test là test_state
+    // Khi ấn next/previous/chọn câu bất kỳ/thoát => chương trình lưu lại câu trả
+    // lời vào test_result và ghi lại câu quiz đang làm vào test_state
     pub async fn resolve_test_question(
         State(state): State<AppState>,
         Path(test_id): Path<Uuid>,
@@ -283,6 +292,7 @@ impl TestHandler {
                 UpdateTestParams {
                     started_at: None,
                     submitted_at: None,
+                    current_testing_quiz_question: Some(question_id),
                     resolved_count: Some(resolved_count),
                     remaining_time: Some(remaining_time),
                 },
@@ -293,15 +303,16 @@ impl TestHandler {
             .get_by_id(question_id, test.quiz_id)
             .await?;
 
-        Ok(into_ok_response(
-            "success".into(),
-            Some(ResolveResponse {
-                next_question_id: question.next_question,
-            }),
-        ))
+        Ok(into_ok_response("success".into(), None::<String>))
     }
 
-    pub async fn submit(State(state): State<AppState>) -> Result<impl IntoResponse> {
+    // Nhấn nút submit => chương trình chấm điểm các test result
+    pub async fn submit(
+        State(state): State<AppState>,
+        Path(test_id): Path<Uuid>,
+    ) -> Result<impl IntoResponse> {
+        let test_state = Arc::clone(&state.test_service);
+
         Ok(())
     }
 

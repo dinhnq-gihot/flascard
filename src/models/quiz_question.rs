@@ -29,4 +29,6 @@ pub struct CreateQuizQuestionRequest {
 pub struct UpdateQuizQuestionRequest {
     pub question_content: Option<String>,
     pub answers: Option<Vec<QuizQuestionAnswer>>,
+    pub previous_question_id: Option<Uuid>,
+    pub next_question_id: Option<Uuid>,
 }

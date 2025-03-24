@@ -10,11 +10,11 @@ use {
     uuid::Uuid,
 };
 
-pub struct QuizService {
+pub struct QuizRepository {
     db: Arc<Database>,
 }
 
-impl QuizService {
+impl QuizRepository {
     pub fn new(db: Arc<Database>) -> Self {
         Self { db }
     }
@@ -133,7 +133,7 @@ impl QuizService {
             Some(direction) if direction == "asc" => query.order_by_asc(quizes::Column::CreatedAt),
             _ => query.order_by_desc(quizes::Column::CreatedAt),
         };
-        
+
         query.all(&conn).await.map_err(Error::QueryFailed)
     }
 
