@@ -1,10 +1,11 @@
-use sea_orm_migration::{
-    prelude::{extension::postgres::Type, *},
-    schema::*,
-    sea_orm::{EnumIter, Iterable},
+use {
+    crate::{m20250223_061404_create_users_table::Users, m20250223_064318_create_sets_table::Sets},
+    sea_orm_migration::{
+        prelude::{extension::postgres::Type, *},
+        schema::*,
+        sea_orm::{EnumIter, Iterable},
+    },
 };
-
-use crate::{m20250223_061404_create_users_table::Users, m20250223_064318_create_sets_table::Sets};
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -27,12 +28,13 @@ impl MigrationTrait for Migration {
                     .table(Questions::Table)
                     .if_not_exists()
                     .col(pk_uuid(Questions::Id).default(Expr::cust("uuid_generate_v4()")))
-                    .col(string(Questions::Content))
                     .col(enumeration(
                         Questions::Type,
                         QuestionTypeEnum,
                         QuestionType::iter(),
                     ))
+                    .col(string(Questions::Content))
+                    .col(json(Questions::Answers))
                     .col(uuid(Questions::SetId))
                     .col(uuid(Questions::CreatorId))
                     .col(timestamp(Questions::CreatedAt).default(Expr::current_timestamp()))
@@ -72,8 +74,9 @@ impl MigrationTrait for Migration {
 pub enum Questions {
     Table,
     Id,
-    Content,
     Type,
+    Content,
+    Answers,
     SetId,
     CreatorId,
     CreatedAt,
