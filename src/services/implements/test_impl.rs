@@ -1,10 +1,13 @@
 use {
     crate::{
         enums::{error::*, generic::PaginatedResponse},
-        models::test::{
-            CreateTest, CreateTestResponse, CurrentTestState, QueryTestParams,
-            ResolveTestingQuestion, TestResponse, TestingAnswer, TestingQuestion, TestingQuiz,
-            UpdateTestParams,
+        models::{
+            quiz_question::QuizQuestionResponse,
+            test::{
+                CreateTest, CreateTestResponse, CurrentTestState, QueryTestParams,
+                ResolveTestingQuestion, TestResponse, TestingAnswer, TestingQuestion, TestingQuiz,
+                UpdateTestParams,
+            },
         },
         repositories::test::TestRepository,
         services::traits::{
@@ -88,7 +91,7 @@ impl TestService for TestServiceImpl {
         })
     }
 
-    async fn get_by_id(&self, test_id: Uuid) -> Result {
+    async fn get_by_id(&self, test_id: Uuid) -> Result<TestResponse> {
         let (test, test_state) = self.test_repository.get_one(test_id).await?;
         let quiz = self.quiz_service.get_by_id(test.quiz_id).await?;
         let set = self.set_service.get_by_id(quiz.set_id).await?;
@@ -118,7 +121,7 @@ impl TestService for TestServiceImpl {
         })
     }
 
-    async fn create(self, payload: CreateTest) -> Result<CreateTestResponse> {
+    async fn create(&self, payload: CreateTest) -> Result<CreateTestResponse> {
         // tạo 1 đối tượng Test với quiz_id và duration
         let test = self
             .test_repository
@@ -167,10 +170,14 @@ impl TestService for TestServiceImpl {
         }
 
         // lấy câu hỏi quiz hiện tại trong test_state
-        let (quiz_question, quiz_question_answers) = self
+        let QuizQuestionResponse {
+            question: quiz_question,
+            answers: quiz_question_answers,
+        } = self
             .quiz_question_service
             .get_by_id(test_state.current_quiz_question, test.quiz_id)
             .await?;
+
         // lấy câu trả lời của quiz ở trên nếu có => để trả về cho FE show kết quả user
         // đã làm
         let testing_question_result = self
@@ -206,12 +213,15 @@ impl TestService for TestServiceImpl {
 
     async fn get_test_question(&self, test_id: Uuid, question_id: Uuid) -> Result<TestingQuestion> {
         let (test, _) = self.test_repository.get_one(test_id).await?;
-        let (quiz_question, quiz_question_answers) = self
+        let QuizQuestionResponse {
+            question: quiz_question,
+            answers: quiz_question_answers,
+        } = self
             .quiz_question_service
             .get_by_id(question_id, test.quiz_id)
             .await?;
         let test_question_result = self
-            .test_service
+            .test_repository
             .get_test_question_result(test.id, quiz_question.id)
             .await?;
         let (text_answer, selected_answer_ids, spent_time_in_second) =
@@ -271,10 +281,15 @@ impl TestService for TestServiceImpl {
             )
             .await?;
 
-        let (question, _) = self
+        let QuizQuestionResponse {
+            question,
+            answers: _,
+        } = self
             .quiz_question_service
             .get_by_id(question_id, test.quiz_id)
             .await?;
+
+        // TODO next
 
         Ok(())
     }

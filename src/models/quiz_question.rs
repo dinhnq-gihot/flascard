@@ -1,17 +1,19 @@
 use {
-    crate::entities::sea_orm_active_enums::QuestionTypeEnum,
+    crate::entities::{
+        quiz_question_answers, quiz_questions, sea_orm_active_enums::QuestionTypeEnum,
+    },
     serde::{Deserialize, Serialize},
     uuid::Uuid,
 };
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct QuizQuestionAnswer {
     pub id: Option<Uuid>,
     pub content: String,
     pub is_answer: bool,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct CreateQuizQuestionRequest {
     pub question_content: String,
     pub answers: Vec<QuizQuestionAnswer>,
@@ -31,4 +33,10 @@ pub struct UpdateQuizQuestionRequest {
     pub answers: Option<Vec<QuizQuestionAnswer>>,
     pub previous_question_id: Option<Uuid>,
     pub next_question_id: Option<Uuid>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct QuizQuestionResponse {
+    pub question: quiz_questions::Model,
+    pub answers: Vec<quiz_question_answers::Model>,
 }

@@ -1,85 +1,59 @@
 use {
     crate::{
         db::db_connection::Database,
-        entities::{
-            answers,
-            prelude::{Answers, Questions},
-            questions,
-        },
+        entities::{prelude::Questions, questions},
         enums::{error::*, generic::PaginatedResponse},
-        models::qna::{CreateQnARequest, QueryQuestionParams, UpdateAnswerRequest},
+        models::qna::{CreateQnARequest, QueryQuestionParams, UpdateQuestionRequest},
     },
     chrono::Utc,
     sea_orm::{
-        ActiveModelTrait, ColumnTrait, EntityTrait, ModelTrait, PaginatorTrait, QueryFilter,
-        QueryOrder, Set,
+        ActiveModelTrait, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, Set,
     },
     std::sync::Arc,
     uuid::Uuid,
 };
 
-pub struct QnAService {
+pub struct QnARepository {
     db: Arc<Database>,
 }
 
-impl QnAService {
+impl QnARepository {
     pub fn new(db: Arc<Database>) -> Self {
         Self { db }
     }
 
-    pub async fn create(
+    pub async fn create_one(
         &self,
         payload: CreateQnARequest,
         creator_id: Uuid,
-    ) -> Result<(questions::Model, Vec<answers::Model>)> {
+    ) -> Result<questions::Model> {
         let conn = self.db.get_connection().await;
+
+        let answers = serde_json::to_value(payload.answers).map_err(|e| Error::Anyhow(e.into()))?;
 
         let question = questions::ActiveModel {
             content: Set(payload.content),
             r#type: Set(payload.r#type),
             set_id: Set(payload.set_id),
             creator_id: Set(creator_id),
+            answers: Set(answers),
             ..Default::default()
         }
         .insert(&conn)
         .await
         .map_err(Error::InsertFailed)?;
 
-        let mut created_answers = Vec::new();
-        for a in payload.answers.iter() {
-            let answer = answers::ActiveModel {
-                content: Set(a.content.clone()),
-                is_correct: Set(a.is_correct),
-                question_id: Set(question.id),
-                ..Default::default()
-            }
-            .insert(&conn)
-            .await
-            .map_err(Error::InsertFailed)?;
-
-            created_answers.push(answer);
-        }
-
-        Ok((question, created_answers))
+        Ok(question)
     }
 
-    pub async fn get_by_id(&self, id: Uuid) -> Result<(questions::Model, Vec<answers::Model>)> {
+    pub async fn get_by_id(&self, id: Uuid) -> Result<questions::Model> {
         let conn = self.db.get_connection().await;
-        let question = Questions::find_by_id(id)
+        Questions::find_by_id(id)
             .filter(questions::Column::IsDeleted.eq(false))
             .one(&conn)
             .await
             .map_err(Error::QueryFailed)?
-            .ok_or(Error::RecordNotFound)?;
-
-        let answers = question
-            .find_related(Answers)
-            .filter(answers::Column::IsDeleted.eq(false))
-            .all(&conn)
-            .await
-            .map_err(Error::QueryFailed)?;
-
-        Ok((question, answers))
+            .ok_or(Error::RecordNotFound)
     }
 
     pub async fn get_all(
@@ -143,7 +117,7 @@ impl QnAService {
     pub async fn update_question(
         &self,
         id: Uuid,
-        content: Option<String>,
+        payload: UpdateQuestionRequest,
     ) -> Result<Option<questions::Model>> {
         let conn = self.db.get_connection().await;
         let mut question: questions::ActiveModel = Questions::find_by_id(id)
@@ -155,8 +129,13 @@ impl QnAService {
             .into();
 
         let mut updated = false;
-        if let Some(c) = content {
+        if let Some(c) = payload.content {
             question.content = Set(c);
+            updated = true;
+        }
+        if let Some(answers) = payload.answers {
+            let answers = serde_json::to_value(answers).map_err(|e| Error::Anyhow(e.into()))?;
+            question.answers = Set(answers);
             updated = true;
         }
 
@@ -170,87 +149,21 @@ impl QnAService {
         }
     }
 
-    pub async fn update_answer(
-        &self,
-        id: Uuid,
-        payload: UpdateAnswerRequest,
-    ) -> Result<Option<answers::Model>> {
+    pub async fn delete_question(&self, id: Uuid) -> Result<()> {
         let conn = self.db.get_connection().await;
-        let mut answer: answers::ActiveModel = Answers::find_by_id(id)
-            .filter(answers::Column::IsDeleted.eq(false))
+        let mut updating_question: questions::ActiveModel = Questions::find_by_id(id)
+            .filter(questions::Column::IsDeleted.eq(false))
             .one(&conn)
             .await
             .map_err(Error::QueryFailed)?
             .ok_or(Error::RecordNotFound)?
             .into();
-
-        let mut updated = false;
-        if let Some(c) = payload.content {
-            answer.content = Set(c);
-            updated = true;
-        }
-        if let Some(c) = payload.is_correct {
-            answer.is_correct = Set(c);
-            updated = true;
-        }
-
-        if updated {
-            answer.updated_at = Set(Utc::now().naive_utc());
-            Ok(Some(
-                answer.update(&conn).await.map_err(Error::UpdateFailed)?,
-            ))
-        } else {
-            Ok(None)
-        }
-    }
-
-    pub async fn delete_question(&self, id: Uuid) -> Result<()> {
-        let conn = self.db.get_connection().await;
-        let question = Questions::find_by_id(id)
-            .filter(questions::Column::IsDeleted.eq(false))
-            .one(&conn)
-            .await
-            .map_err(Error::QueryFailed)?
-            .ok_or(Error::RecordNotFound)?;
-
-        let related_answers = question
-            .find_related(Answers)
-            .filter(answers::Column::IsDeleted.eq(false))
-            .all(&conn)
-            .await
-            .map_err(Error::QueryFailed)?
-            .into_iter()
-            .map(|a| a.into())
-            .collect::<Vec<answers::ActiveModel>>();
-
-        for mut a in related_answers.into_iter() {
-            a.is_deleted = Set(true);
-            a.update(&conn).await.map_err(Error::DeleteFailed)?;
-        }
-
-        let mut updating_question: questions::ActiveModel = question.into();
 
         updating_question.is_deleted = Set(true);
         updating_question
             .update(&conn)
             .await
             .map_err(Error::DeleteFailed)?;
-
-        Ok(())
-    }
-
-    pub async fn delete_answer(&self, id: Uuid) -> Result<()> {
-        let conn = self.db.get_connection().await;
-        let mut answer: answers::ActiveModel = Answers::find_by_id(id)
-            .filter(answers::Column::IsDeleted.eq(false))
-            .one(&conn)
-            .await
-            .map_err(Error::QueryFailed)?
-            .ok_or(Error::RecordNotFound)?
-            .into();
-
-        answer.is_deleted = Set(true);
-        answer.update(&conn).await.map_err(Error::DeleteFailed)?;
 
         Ok(())
     }
@@ -266,16 +179,5 @@ impl QnAService {
 
         Ok(question.is_some())
     }
-
-    pub async fn is_creator_of_answer(&self, answer_id: Uuid, user_id: Uuid) -> Result<bool> {
-        let conn = self.db.get_connection().await;
-        let answer = Answers::find_by_id(answer_id)
-            .filter(questions::Column::IsDeleted.eq(false))
-            .filter(questions::Column::CreatorId.eq(user_id))
-            .one(&conn)
-            .await
-            .map_err(Error::QueryFailed)?;
-
-        Ok(answer.is_some())
-    }
 }
+//

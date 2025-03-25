@@ -11,8 +11,9 @@ use {
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
-    pub content: String,
     pub r#type: QuestionTypeEnum,
+    pub content: String,
+    pub answers: Json,
     pub set_id: Uuid,
     pub creator_id: Uuid,
     pub created_at: DateTime,
@@ -22,8 +23,6 @@ pub struct Model {
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
-    #[sea_orm(has_many = "super::answers::Entity")]
-    Answers,
     #[sea_orm(has_many = "super::quiz_questions::Entity")]
     QuizQuestions,
     #[sea_orm(
@@ -42,12 +41,6 @@ pub enum Relation {
         on_delete = "Restrict"
     )]
     Users,
-}
-
-impl Related<super::answers::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Answers.def()
-    }
 }
 
 impl Related<super::quiz_questions::Entity> for Entity {

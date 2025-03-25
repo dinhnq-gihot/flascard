@@ -9,11 +9,11 @@ use {
     uuid::Uuid,
 };
 
-pub struct UserService {
+pub struct UserRepository {
     db: Arc<Database>,
 }
 
-impl UserService {
+impl UserRepository {
     pub fn new(db: Arc<Database>) -> Self {
         Self { db }
     }

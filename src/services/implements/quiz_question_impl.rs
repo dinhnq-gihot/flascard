@@ -1,0 +1,153 @@
+use {
+    crate::{
+        entities::{quiz_question_answers, quiz_questions},
+        enums::error::*,
+        models::{
+            quiz::UpdateQuizRequest,
+            quiz_question::{
+                CreateQuizQuestionRequest, QuizQuestionResponse, UpdateQuizQuestionRequest,
+            },
+        },
+        repositories::quiz_question::QuizQuestionRepository,
+        services::traits::{quiz_question_trait::QuizQuestionService, quiz_trait::QuizService},
+        utils::validator::{all_quiz_answers_contain_id, validate_answer},
+    },
+    async_trait::async_trait,
+    std::sync::Arc,
+    uuid::Uuid,
+};
+
+pub struct QuizQuestionServiceImpl {
+    quiz_question_repository: Arc<QuizQuestionRepository>,
+    quiz_service: Arc<dyn QuizService>,
+}
+
+impl QuizQuestionServiceImpl {
+    pub fn new(
+        quiz_question_repository: Arc<QuizQuestionRepository>,
+        quiz_service: Arc<dyn QuizService>,
+    ) -> Self {
+        Self {
+            quiz_question_repository,
+            quiz_service,
+        }
+    }
+}
+
+#[async_trait]
+impl QuizQuestionService for QuizQuestionServiceImpl {
+    async fn create_one(
+        &self,
+        caller_id: Uuid,
+        quiz_id: Uuid,
+        payload: CreateQuizQuestionRequest,
+    ) -> Result<(quiz_questions::Model, Vec<quiz_question_answers::Model>)> {
+        if !validate_answer(&payload.r#type, &payload.answers) {
+            return Err(Error::InvalidAnswer);
+        }
+        let quiz = self.quiz_service.get_by_id(quiz_id).await?;
+
+        if quiz.creator_id != caller_id {
+            return Err(Error::PermissionDenied);
+        }
+        if quiz.is_published {
+            return Err(Error::PermissionDenied);
+        }
+
+        let new_question = self
+            .quiz_question_repository
+            .create_one(quiz.id, quiz.last_question, payload.clone())
+            .await?;
+        if let Some(last_question_id) = quiz.last_question {
+            self.quiz_question_repository
+                .update_one(
+                    last_question_id,
+                    quiz.id,
+                    UpdateQuizQuestionRequest {
+                        question_content: None,
+                        answers: None,
+                        previous_question_id: None,
+                        next_question_id: Some(new_question.id),
+                    },
+                )
+                .await?;
+        }
+        let new_answers = self
+            .quiz_question_repository
+            .create_answers(new_question.id, payload.answers)
+            .await?;
+
+        self.quiz_service
+            .update_one(
+                caller_id,
+                quiz.id,
+                UpdateQuizRequest {
+                    is_public: None,
+                    publish: None,
+                    last_question_id: Some(new_question.id),
+                },
+            )
+            .await?;
+        Ok((new_question, new_answers))
+    }
+
+    async fn update_one(
+        &self,
+        caller_id: Uuid,
+        quiz_id: Uuid,
+        quiz_question_id: Uuid,
+        payload: UpdateQuizQuestionRequest,
+    ) -> Result<Option<quiz_questions::Model>> {
+        let quiz = self.quiz_service.get_by_id(quiz_id).await?;
+        let (quiz_question, _) = self
+            .quiz_question_repository
+            .get_by_id(quiz_question_id, quiz_id)
+            .await?;
+
+        if quiz.creator_id != caller_id {
+            return Err(Error::PermissionDenied);
+        }
+        if quiz.is_published {
+            return Err(Error::PermissionDenied);
+        }
+        if let Some(answers) = &payload.answers {
+            if !validate_answer(&quiz_question.r#type, answers)
+                || !all_quiz_answers_contain_id(answers)
+            {
+                return Err(Error::InvalidAnswer);
+            }
+        }
+
+        self.quiz_question_repository
+            .update_one(quiz_question_id, quiz_id, payload)
+            .await
+    }
+
+    async fn delete(&self, caller_id: Uuid, quiz_id: Uuid, quiz_question_id: Uuid) -> Result<()> {
+        let quiz = self.quiz_service.get_by_id(quiz_id).await?;
+        if quiz.creator_id != caller_id {
+            return Err(Error::PermissionDenied);
+        }
+
+        self.quiz_question_repository
+            .delete(quiz_question_id, quiz_id)
+            .await
+    }
+
+    async fn get_by_id(
+        &self,
+        quiz_id: Uuid,
+        quiz_question_id: Uuid,
+    ) -> Result<QuizQuestionResponse> {
+        let (question, answers) = self
+            .quiz_question_repository
+            .get_by_id(quiz_question_id, quiz_id)
+            .await?;
+
+        Ok(QuizQuestionResponse { question, answers })
+    }
+
+    async fn get_all(&self, quiz_id: Uuid) -> Result<Vec<quiz_questions::Model>> {
+        self.quiz_question_repository.get_all(quiz_id).await
+    }
+}

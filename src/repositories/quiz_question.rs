@@ -15,11 +15,11 @@ use {
     uuid::Uuid,
 };
 
-pub struct QuizQuestionService {
+pub struct QuizQuestionRepository {
     db: Arc<Database>,
 }
 
-impl QuizQuestionService {
+impl QuizQuestionRepository {
     pub fn new(db: Arc<Database>) -> Self {
         Self { db }
     }
@@ -34,7 +34,7 @@ impl QuizQuestionService {
 
         let CreateQuizQuestionRequest {
             question_content,
-            answers,
+            answers: _,
             r#type,
             question_id,
         } = payload;
@@ -53,39 +53,6 @@ impl QuizQuestionService {
         .insert(&conn)
         .await
         .map_err(Error::InsertFailed)?;
-
-        // update next_id for last question if is some
-        // if let Some(last_question_id) = last_question_id {
-        //     let mut last_question: quiz_questions::ActiveModel =
-        //         QuizQuestions::find_by_id(last_question_id)
-        //             .one(&conn)
-        //             .await
-        //             .map_err(Error::QueryFailed)?
-        //             .ok_or(Error::RecordNotFound)?
-        //             .into();
-        //     last_question.next_question = Set(Some(return_question.id));
-        //     last_question
-        //         .update(&conn)
-        //         .await
-        //         .map_err(Error::UpdateFailed)?;
-        // }
-
-        // let answer_active_models = answers
-        //     .into_iter()
-        //     .map(|a| {
-        //         quiz_question_answers::ActiveModel {
-        //             quiz_question_id: Set(return_question.id),
-        //             answer_content: Set(a.content),
-        //             is_answer: Set(a.is_answer),
-        //             ..Default::default()
-        //         }
-        //     })
-        //     .collect::<Vec<quiz_question_answers::ActiveModel>>();
-
-        // let return_answers = QuizQuestionAnswers::insert_many(answer_active_models)
-        //     .exec_with_returning_many(&conn)
-        //     .await
-        //     .map_err(Error::InsertFailed)?;
 
         Ok(return_question)
     }
