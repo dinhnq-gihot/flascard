@@ -32,13 +32,6 @@ pub fn encode_jwt(user_id: Uuid, user_role: String) -> Result<String> {
 }
 
 pub fn decode_jwt(token: String) -> Result<Claims> {
-    // let header = decode_header(&token).map_err(|e| Error::Anyhow(e.into()))?;
-    // let key = DecodingKey::from_rsa_der(&[]);
-
-    // let mut validation = Validation::new(header.alg);
-    // validation.insecure_disable_signature_validation();
-    // validation.validate_aud = false;
-
     let secret = env::var("JWT_SECRET").map_err(|_| Error::EnvVarNotFound("JWT_SECRET".into()))?;
     let key = DecodingKey::from_secret(secret.as_bytes());
 

@@ -15,6 +15,12 @@ pub struct QuizServiceImpl {
     quiz_repository: Arc<QuizRepository>,
 }
 
+impl QuizServiceImpl {
+    pub fn new(quiz_repository: Arc<QuizRepository>) -> Self {
+        Self { quiz_repository }
+    }
+}
+
 #[async_trait]
 impl QuizService for QuizServiceImpl {
     async fn create_one(
@@ -51,12 +57,28 @@ impl QuizService for QuizServiceImpl {
         self.quiz_repository.delete_one(quiz_id).await
     }
 
-    async fn get_by_id(&self, quiz_id: Uuid) -> Result<quizes::Model> {
+    async fn get_by_id(&self, caller_id: Uuid, quiz_id: Uuid) -> Result<quizes::Model> {
+        if !self
+            .quiz_repository
+            .is_created_by(quiz_id, caller_id)
+            .await?
+            || !self
+                .quiz_repository
+                .is_shared_with(quiz_id, caller_id)
+                .await?
+        {
+            return Err(Error::PermissionDenied);
+        }
+
         self.quiz_repository.get_by_id(quiz_id).await
     }
 
-    async fn get_all(&self, params: FilterQuizParams) -> Result<Vec<quizes::Model>> {
-        self.quiz_repository.get_all(params).await
+    async fn get_all(
+        &self,
+        caller_id: Uuid,
+        params: FilterQuizParams,
+    ) -> Result<Vec<quizes::Model>> {
+        self.quiz_repository.get_all(caller_id, params).await
     }
 
     async fn share(

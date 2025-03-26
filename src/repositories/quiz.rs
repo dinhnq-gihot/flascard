@@ -124,9 +124,15 @@ impl QuizRepository {
             .ok_or(Error::RecordNotFound)
     }
 
-    pub async fn get_all(&self, params: FilterQuizParams) -> Result<Vec<quizes::Model>> {
+    pub async fn get_all(
+        &self,
+        caller_id: Uuid,
+        params: FilterQuizParams,
+    ) -> Result<Vec<quizes::Model>> {
         let conn = self.db.get_connection().await;
-        let mut query = Quizes::find().filter(quizes::Column::IsDeleted.eq(false));
+        let mut query = Quizes::find()
+            .filter(quizes::Column::CreatorId.eq(caller_id))
+            .filter(quizes::Column::IsDeleted.eq(false));
 
         if let Some(set_id) = params.set_id {
             query = query.filter(quizes::Column::SetId.eq(set_id));

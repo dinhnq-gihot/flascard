@@ -84,20 +84,21 @@ impl QuizQuestionRepository {
 
     pub async fn update_one(
         &self,
-        id: Uuid,
+        quiz_question_id: Uuid,
         quiz_id: Uuid,
         payload: UpdateQuizQuestionRequest,
-    ) -> Result<Option<quiz_questions::Model>> {
+    ) -> Result<Option<(quiz_questions::Model, Vec<quiz_question_answers::Model>)>> {
         let conn = self.db.get_connection().await;
 
-        let mut quiz_question: quiz_questions::ActiveModel = QuizQuestions::find_by_id(id)
-            .filter(quiz_questions::Column::IsDeleted.eq(false))
-            .filter(quiz_questions::Column::QuizId.eq(quiz_id))
-            .one(&conn)
-            .await
-            .map_err(Error::QueryFailed)?
-            .ok_or(Error::RecordNotFound)?
-            .into();
+        let mut quiz_question: quiz_questions::ActiveModel =
+            QuizQuestions::find_by_id(quiz_question_id)
+                .filter(quiz_questions::Column::IsDeleted.eq(false))
+                .filter(quiz_questions::Column::QuizId.eq(quiz_id))
+                .one(&conn)
+                .await
+                .map_err(Error::QueryFailed)?
+                .ok_or(Error::RecordNotFound)?
+                .into();
 
         let UpdateQuizQuestionRequest {
             question_content,
@@ -112,7 +113,7 @@ impl QuizQuestionRepository {
             quiz_question.question_content = Set(question_content);
             updated = true;
         }
-        if let Some(answers) = answers {
+        let updated_answers = if let Some(answers) = answers {
             // create transactions for updating answers
             let txn = conn.begin().await.map_err(|e| Error::Anyhow(e.into()))?;
 
@@ -131,7 +132,16 @@ impl QuizQuestionRepository {
             txn.rollback().await.map_err(Error::UpdateFailed)?;
 
             updated = true;
-        }
+
+            QuizQuestionAnswers::find()
+                .filter(quiz_question_answers::Column::QuizQuestionId.eq(quiz_question_id))
+                .filter(quiz_question_answers::Column::IsDeleted.eq(false))
+                .all(&conn)
+                .await
+                .map_err(Error::QueryFailed)?
+        } else {
+            vec![]
+        };
         if let Some(previous_question_id) = previous_question_id {
             quiz_question.previous_question = Set(Some(previous_question_id));
             updated = true;
@@ -142,12 +152,13 @@ impl QuizQuestionRepository {
         }
 
         if updated {
-            Ok(Some(
+            Ok(Some((
                 quiz_question
                     .update(&conn)
                     .await
                     .map_err(Error::UpdateFailed)?,
-            ))
+                updated_answers,
+            )))
         } else {
             Ok(None)
         }
@@ -207,5 +218,26 @@ impl QuizQuestionRepository {
             .map_err(Error::DeleteFailed)?;
 
         Ok(())
+    }
+
+    pub async fn is_of_question(
+        &self,
+        question_id: Uuid,
+        checking_answer_ids: Vec<Uuid>,
+    ) -> Result<bool> {
+        let conn = self.db.get_connection().await;
+        let answers = QuizQuestionAnswers::find()
+            .filter(quiz_question_answers::Column::QuizQuestionId.eq(question_id))
+            .all(&conn)
+            .await
+            .map_err(Error::QueryFailed)?;
+
+        for answer in answers.into_iter() {
+            if !checking_answer_ids.contains(&answer.id) {
+                return Ok(false);
+            }
+        }
+
+        Ok(true)
     }
 }

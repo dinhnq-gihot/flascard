@@ -17,7 +17,7 @@ pub trait QuizQuestionService: Sync + Send {
         caller_id: Uuid,
         quiz_id: Uuid,
         payload: CreateQuizQuestionRequest,
-    ) -> Result<(quiz_questions::Model, Vec<quiz_question_answers::Model>)>;
+    ) -> Result<QuizQuestionResponse>;
 
     async fn update_one(
         &self,
@@ -25,15 +25,16 @@ pub trait QuizQuestionService: Sync + Send {
         quiz_id: Uuid,
         quiz_question_id: Uuid,
         payload: UpdateQuizQuestionRequest,
-    ) -> Result<Option<quiz_questions::Model>>;
+    ) -> Result<Option<QuizQuestionResponse>>;
 
     async fn delete(&self, caller_id: Uuid, quiz_id: Uuid, quiz_question_id: Uuid) -> Result<()>;
 
     async fn get_by_id(
         &self,
+        caller_id: Uuid,
         quiz_id: Uuid,
         quiz_question_id: Uuid,
     ) -> Result<QuizQuestionResponse>;
 
-    async fn get_all(&self, quiz_id: Uuid) -> Result<Vec<quiz_questions::Model>>;
+    async fn get_all(&self, caller_id: Uuid, quiz_id: Uuid) -> Result<Vec<quiz_questions::Model>>;
 }

@@ -28,7 +28,7 @@ pub struct UpdateUserRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct DeleteRequest {
-    pub id: Uuid,
+    pub user_id: Uuid,
 }
 
 #[derive(Debug, Serialize)]

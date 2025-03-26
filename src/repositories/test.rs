@@ -14,12 +14,17 @@ pub struct TestRepository {
 }
 
 impl TestRepository {
+    pub fn new(db: Arc<Database>) -> Self {
+        Self { db }
+    }
+
     pub async fn create_one(&self, quiz_id: Uuid, max_duration: u64) -> Result<tests::Model> {
         !unimplemented!()
     }
 
     pub async fn get_all(
         &self,
+        caller_id: Uuid,
         params: QueryTestParams,
     ) -> Result<PaginatedResponse<(tests::Model, test_states::Model)>> {
         !unimplemented!()

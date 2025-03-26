@@ -20,8 +20,21 @@ impl UserRepository {
 
     pub async fn get_all_users(&self) -> Result<Vec<users::Model>> {
         let conn = self.db.get_connection().await;
-        let users = Users::find().all(&conn).await.map_err(Error::QueryFailed)?;
-        Ok(users)
+        Users::find()
+            .filter(users::Column::IsDeleted.eq(false))
+            .all(&conn)
+            .await
+            .map_err(Error::QueryFailed)
+    }
+
+    pub async fn get_by_id(&self, user_id: Uuid) -> Result<users::Model> {
+        let conn = self.db.get_connection().await;
+        Users::find_by_id(user_id)
+            .filter(users::Column::IsDeleted.eq(false))
+            .one(&conn)
+            .await
+            .map_err(Error::QueryFailed)?
+            .ok_or(Error::RecordNotFound)
     }
 
     pub async fn create_user(
@@ -41,12 +54,10 @@ impl UserRepository {
             ..Default::default()
         };
 
-        let res = users::Entity::insert(new_user)
+        users::Entity::insert(new_user)
             .exec_with_returning(&conn)
             .await
-            .map_err(Error::InsertFailed)?;
-
-        Ok(res)
+            .map_err(Error::InsertFailed)
     }
 
     pub async fn update_user(
@@ -103,16 +114,15 @@ impl UserRepository {
         }
     }
 
-    pub async fn get_by_email(&self, email: String) -> Result<Option<users::Model>> {
+    pub async fn get_by_email(&self, email: String) -> Result<users::Model> {
         let conn = self.db.get_connection().await;
-        let user = Users::find()
+        Users::find()
             .filter(users::Column::Email.eq(email))
             .filter(users::Column::IsDeleted.eq(false))
             .one(&conn)
             .await
-            .map_err(Error::QueryFailed)?;
-
-        Ok(user)
+            .map_err(Error::QueryFailed)?
+            .ok_or(Error::RecordNotFound)
     }
 
     pub async fn delete_user(&self, id: Uuid) -> Result<()> {

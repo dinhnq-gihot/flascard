@@ -41,11 +41,11 @@ impl QuizQuestionService for QuizQuestionServiceImpl {
         caller_id: Uuid,
         quiz_id: Uuid,
         payload: CreateQuizQuestionRequest,
-    ) -> Result<(quiz_questions::Model, Vec<quiz_question_answers::Model>)> {
+    ) -> Result<QuizQuestionResponse> {
         if !validate_answer(&payload.r#type, &payload.answers) {
             return Err(Error::InvalidAnswer);
         }
-        let quiz = self.quiz_service.get_by_id(quiz_id).await?;
+        let quiz = self.quiz_service.get_by_id(caller_id, quiz_id).await?;
 
         if quiz.creator_id != caller_id {
             return Err(Error::PermissionDenied);
@@ -88,7 +88,10 @@ impl QuizQuestionService for QuizQuestionServiceImpl {
                 },
             )
             .await?;
-        Ok((new_question, new_answers))
+        Ok(QuizQuestionResponse {
+            question: new_question,
+            answers: new_answers,
+        })
     }
 
     async fn update_one(
@@ -97,8 +100,8 @@ impl QuizQuestionService for QuizQuestionServiceImpl {
         quiz_id: Uuid,
         quiz_question_id: Uuid,
         payload: UpdateQuizQuestionRequest,
-    ) -> Result<Option<quiz_questions::Model>> {
-        let quiz = self.quiz_service.get_by_id(quiz_id).await?;
+    ) -> Result<Option<QuizQuestionResponse>> {
+        let quiz = self.quiz_service.get_by_id(caller_id, quiz_id).await?;
         let (quiz_question, _) = self
             .quiz_question_repository
             .get_by_id(quiz_question_id, quiz_id)
@@ -111,21 +114,41 @@ impl QuizQuestionService for QuizQuestionServiceImpl {
             return Err(Error::PermissionDenied);
         }
         if let Some(answers) = &payload.answers {
+            // Kiểm tra xem answer đc chỉnh có phù hợp không
+            // và tất cả các answer phải chưa id để update trong db
             if !validate_answer(&quiz_question.r#type, answers)
                 || !all_quiz_answers_contain_id(answers)
             {
                 return Err(Error::InvalidAnswer);
             }
+            let answer_ids = answers.iter().map(|a| a.id.unwrap()).collect::<Vec<Uuid>>();
+
+            // Kiểm tra các answer có cùng 1 question không
+            if !self
+                .quiz_question_repository
+                .is_of_question(quiz_question_id, answer_ids)
+                .await?
+            {
+                return Err(Error::InvalidAnswer);
+            }
         }
 
-        self.quiz_question_repository
+        if let Some((updated_question, updated_answers)) = self
+            .quiz_question_repository
             .update_one(quiz_question_id, quiz_id, payload)
-            .await
+            .await?
+        {
+            Ok(Some(QuizQuestionResponse {
+                question: updated_question,
+                answers: updated_answers,
+            }))
+        } else {
+            Ok(None)
+        }
     }
 
     async fn delete(&self, caller_id: Uuid, quiz_id: Uuid, quiz_question_id: Uuid) -> Result<()> {
-        let quiz = self.quiz_service.get_by_id(quiz_id).await?;
-        if quiz.creator_id != caller_id {
+        if !self.quiz_service.is_created_by(quiz_id, caller_id).await? {
             return Err(Error::PermissionDenied);
         }
 
@@ -136,9 +159,16 @@ impl QuizQuestionService for QuizQuestionServiceImpl {
 
     async fn get_by_id(
         &self,
+        caller_id: Uuid,
         quiz_id: Uuid,
         quiz_question_id: Uuid,
     ) -> Result<QuizQuestionResponse> {
+        if !self.quiz_service.is_created_by(quiz_id, caller_id).await?
+            || !self.quiz_service.is_shared_with(quiz_id, caller_id).await?
+        {
+            return Err(Error::PermissionDenied);
+        }
+
         let (question, answers) = self
             .quiz_question_repository
             .get_by_id(quiz_question_id, quiz_id)
@@ -147,7 +177,13 @@ impl QuizQuestionService for QuizQuestionServiceImpl {
         Ok(QuizQuestionResponse { question, answers })
     }
 
-    async fn get_all(&self, quiz_id: Uuid) -> Result<Vec<quiz_questions::Model>> {
+    async fn get_all(&self, caller_id: Uuid, quiz_id: Uuid) -> Result<Vec<quiz_questions::Model>> {
+        if !self.quiz_service.is_created_by(quiz_id, caller_id).await?
+            || !self.quiz_service.is_shared_with(quiz_id, caller_id).await?
+        {
+            return Err(Error::PermissionDenied);
+        }
+
         self.quiz_question_repository.get_all(quiz_id).await
     }
 }

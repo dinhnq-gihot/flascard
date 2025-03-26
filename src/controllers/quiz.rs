@@ -23,8 +23,7 @@ impl QuizHandler {
         Json(payload): Json<CreateQuizRequest>,
     ) -> Result<impl IntoResponse> {
         let service = Arc::clone(&state.quiz_service);
-
-        let res = service.create_one(payload, caller.id).await?;
+        let res = service.create_one(caller.id, payload).await?;
 
         Ok(into_ok_response("created successfully".into(), Some(res)))
     }
@@ -32,20 +31,11 @@ impl QuizHandler {
     pub async fn update(
         State(state): State<AppState>,
         Extension(caller): Extension<Claims>,
-        Path(id): Path<Uuid>,
+        Path(quiz_id): Path<Uuid>,
         Json(payload): Json<UpdateQuizRequest>,
     ) -> Result<impl IntoResponse> {
         let service = Arc::clone(&state.quiz_service);
-
-        let quiz = service.get_by_id(id).await?;
-        if caller.id != quiz.creator_id {
-            return Err(Error::AccessDenied);
-        }
-        if quiz.is_published {
-            return Err(Error::Published);
-        }
-
-        let res = service.update_one(id, payload).await?;
+        let res = service.update_one(caller.id, quiz_id, payload).await?;
 
         Ok(into_ok_response("Updated successfully".into(), res))
     }
@@ -53,16 +43,10 @@ impl QuizHandler {
     pub async fn delete(
         State(state): State<AppState>,
         Extension(caller): Extension<Claims>,
-        Path(id): Path<Uuid>,
+        Path(quiz_id): Path<Uuid>,
     ) -> Result<impl IntoResponse> {
         let service = Arc::clone(&state.quiz_service);
-
-        let quiz = service.get_by_id(id).await?;
-        if caller.id != quiz.creator_id {
-            return Err(Error::AccessDenied);
-        }
-
-        service.delete_one(id).await?;
+        service.delete_one(quiz_id, caller.id).await?;
 
         Ok(into_ok_response(
             "Deleted successfully".into(),

@@ -6,8 +6,8 @@ use {
         error,
         routes::setup_routing,
         services::{
-            prelude::*, quiz::QuizService, quiz_question::QuizQuestionService,
-            shared_quiz::SharedQuizService, test::TestService,
+            implements::{init_service_implements, ServiceImpls},
+            traits::prelude::*,
         },
     },
     std::sync::Arc,
@@ -17,14 +17,12 @@ use {
 
 #[derive(Clone)]
 pub struct AppState {
-    pub user_service: Arc<UserService>,
-    pub set_service: Arc<SetService>,
-    pub shared_set_service: Arc<SharedSetService>,
-    pub qna_service: Arc<QnAService>,
-    pub quiz_service: Arc<QuizService>,
-    pub quiz_question_service: Arc<QuizQuestionService>,
-    pub shared_quiz_service: Arc<SharedQuizService>,
-    pub test_service: Arc<TestService>,
+    pub user_service: Arc<dyn UserService>,
+    pub set_service: Arc<dyn SetService>,
+    pub qna_service: Arc<dyn QnAService>,
+    pub quiz_service: Arc<dyn QuizService>,
+    pub quiz_question_service: Arc<dyn QuizQuestionService>,
+    pub test_service: Arc<dyn TestService>,
 }
 
 impl AppState {
@@ -34,15 +32,22 @@ impl AppState {
             Error::Anyhow(e.into())
         })?);
 
+        let ServiceImpls {
+            user_service,
+            set_service,
+            qna_service,
+            quiz_service,
+            quiz_question_service,
+            test_service,
+        } = init_service_implements(db).await;
+
         Ok(Self {
-            user_service: Arc::new(UserService::new(Arc::clone(&db))),
-            set_service: Arc::new(SetService::new(Arc::clone(&db))),
-            shared_set_service: Arc::new(SharedSetService::new(Arc::clone(&db))),
-            qna_service: Arc::new(QnAService::new(Arc::clone(&db))),
-            quiz_service: Arc::new(QuizService::new(Arc::clone(&db))),
-            quiz_question_service: Arc::new(QuizQuestionService::new(Arc::clone(&db))),
-            shared_quiz_service: Arc::new(SharedQuizService::new(Arc::clone(&db))),
-            test_service: Arc::new(TestService::new(Arc::clone(&db))),
+            user_service,
+            set_service,
+            qna_service,
+            quiz_service,
+            quiz_question_service,
+            test_service,
         })
     }
 }

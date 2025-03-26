@@ -46,13 +46,17 @@ impl TestServiceImpl {
 
 #[async_trait]
 impl TestService for TestServiceImpl {
-    async fn get_all(&self, params: QueryTestParams) -> Result<PaginatedResponse<TestResponse>> {
+    async fn get_all(
+        &self,
+        caller_id: Uuid,
+        params: QueryTestParams,
+    ) -> Result<PaginatedResponse<TestResponse>> {
         let PaginatedResponse {
             total_pages,
             current_page,
             page_size,
             data,
-        } = self.test_repository.get_all(params).await?;
+        } = self.test_repository.get_all(caller_id, params).await?;
 
         let mut res = Vec::<TestResponse>::new();
 
@@ -91,7 +95,7 @@ impl TestService for TestServiceImpl {
         })
     }
 
-    async fn get_by_id(&self, test_id: Uuid) -> Result<TestResponse> {
+    async fn get_by_id(&self, caller_id: Uuid, test_id: Uuid) -> Result<TestResponse> {
         let (test, test_state) = self.test_repository.get_one(test_id).await?;
         let quiz = self.quiz_service.get_by_id(test.quiz_id).await?;
         let set = self.set_service.get_by_id(quiz.set_id).await?;

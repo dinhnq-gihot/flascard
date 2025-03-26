@@ -1,19 +1,13 @@
 use {
     crate::{
         debug,
-        enums::{
-            error::{Error, Result},
-            generic::into_ok_response,
-        },
-        models::user::{
-            DeleteRequest, LoginRequest, RegisterUserRequest, UpdateUserRequest, UserModel,
-        },
+        enums::{error::Result, generic::into_ok_response},
+        models::user::{DeleteRequest, LoginRequest, RegisterUserRequest, UpdateUserRequest},
         r#static::BLACKLIST_TOKEN_VEC,
         server::AppState,
-        utils::jwt::{encode_jwt, Claims},
+        utils::jwt::Claims,
     },
     axum::{extract::State, response::IntoResponse, Extension, Json},
-    bcrypt::{hash, verify, DEFAULT_COST},
     flashcard::only_role,
     std::sync::Arc,
 };
@@ -24,9 +18,9 @@ impl UserHandler {
     #[only_role("Staff")]
     pub async fn get_all_users(
         State(state): State<AppState>,
-        Extension(claims): Extension<Claims>,
+        Extension(caller): Extension<Claims>,
     ) -> Result<impl IntoResponse> {
-        debug!("get_all_users: {claims:?}");
+        debug!("get_all_users: {caller:?}");
 
         let service = Arc::clone(&state.user_service);
         let users = service.get_all_users().await?;
@@ -39,21 +33,9 @@ impl UserHandler {
         Json(payload): Json<RegisterUserRequest>,
     ) -> Result<impl IntoResponse> {
         debug!("register_user: {payload:?}");
+
         let service = Arc::clone(&state.user_service);
-
-        let RegisterUserRequest {
-            email,
-            password,
-            name,
-            role,
-        } = payload;
-
-        let hashed_password = hash(&password, DEFAULT_COST).map_err(|_| Error::HashingFailed)?;
-
-        let user: UserModel = service
-            .create_user(email, hashed_password, name, role)
-            .await?
-            .into();
+        let user = service.register_user(payload).await?;
 
         Ok(into_ok_response(
             "registered successfully".into(),
@@ -68,53 +50,34 @@ impl UserHandler {
         debug!("login request: {payload:?}");
 
         let service = Arc::clone(&state.user_service);
-        let LoginRequest { email, password } = payload;
+        let res = service.login(payload).await?;
 
-        if let Some(user) = service.get_by_email(email).await? {
-            debug!("user: {user:?}");
-            // Verify password
-            if !verify(password, &user.password).map_err(|_| Error::VerifyPasswordFailed)? {
-                return Err(Error::LoginFailed);
-            }
-
-            let jwt = encode_jwt(user.id, user.role.to_string())?;
-            Ok(into_ok_response("Login successfully".into(), Some(jwt)))
-        } else {
-            Err(Error::LoginFailed)
-        }
+        Ok(into_ok_response("login successfully".into(), Some(res)))
     }
 
     pub async fn update(
         State(state): State<AppState>,
-        Extension(claims): Extension<Claims>,
+        Extension(caller): Extension<Claims>,
         Json(payload): Json<UpdateUserRequest>,
     ) -> Result<impl IntoResponse> {
-        debug!("update request: {claims:?} {payload:?}");
+        debug!("update request: {caller:?} {payload:?}");
 
         let service = Arc::clone(&state.user_service);
-        let UpdateUserRequest {
-            name,
-            email,
-            password,
-            role,
-        } = payload;
+        let res = service.update(caller.id, payload).await?;
 
-        let updated = service
-            .update_user(claims.id, name, email, password, role)
-            .await?;
-
-        Ok(into_ok_response("Updated successfully".into(), updated))
+        Ok(into_ok_response("Updated successfully".into(), res))
     }
 
+    #[only_role("Staff")]
     pub async fn delete(
         State(state): State<AppState>,
+        Extension(caller): Extension<Claims>,
         Json(payload): Json<DeleteRequest>,
     ) -> Result<impl IntoResponse> {
         debug!("delete request: {payload:?}");
 
         let service = Arc::clone(&state.user_service);
-        let DeleteRequest { id } = payload;
-        service.delete_user(id).await?;
+        service.delete(payload.user_id).await?;
 
         Ok(into_ok_response(
             "Deleted successfully".into(),

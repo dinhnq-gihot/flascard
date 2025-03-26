@@ -10,11 +10,14 @@ use {
 
 #[async_trait]
 pub trait QuizService: Send + Sync {
+    // tạo 1 quiz
     async fn create_one(
         &self,
         creator_id: Uuid,
         payload: CreateQuizRequest,
     ) -> Result<quizes::Model>;
+
+    // cập nhật metadata của quiz
     async fn update_one(
         &self,
         caller_id: Uuid,
@@ -22,8 +25,12 @@ pub trait QuizService: Send + Sync {
         payload: UpdateQuizRequest,
     ) -> Result<Option<quizes::Model>>;
     async fn delete_one(&self, quiz_id: Uuid, caller: Uuid) -> Result<()>;
-    async fn get_by_id(&self, quiz_id: Uuid) -> Result<quizes::Model>;
-    async fn get_all(&self, params: FilterQuizParams) -> Result<Vec<quizes::Model>>;
+    async fn get_by_id(&self, caller_id: Uuid, quiz_id: Uuid) -> Result<quizes::Model>;
+    async fn get_all(
+        &self,
+        caller_id: Uuid,
+        params: FilterQuizParams,
+    ) -> Result<Vec<quizes::Model>>;
 
     // SHARE SESSION
     async fn share(

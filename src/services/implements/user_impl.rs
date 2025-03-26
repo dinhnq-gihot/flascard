@@ -28,6 +28,12 @@ impl UserService for UserServiceImpl {
     async fn get_all_users(&self) -> Result<Vec<users::Model>> {
         self.user_repository.get_all_users().await
     }
+    async fn get_by_id(&self, user_id: Uuid) -> Result<UserModel> {
+        Ok(self.user_repository.get_by_id(user_id).await?.into())
+    }
+    async fn get_my_info(&self, email: String) -> Result<UserModel> {
+        Ok(self.user_repository.get_by_email(email).await?.into())
+    }
 
     async fn register_user(&self, payload: RegisterUserRequest) -> Result<UserModel> {
         let RegisterUserRequest {
@@ -49,7 +55,7 @@ impl UserService for UserServiceImpl {
     async fn login(&self, payload: LoginRequest) -> Result<String> {
         let LoginRequest { email, password } = payload;
 
-        if let Some(user) = self.user_repository.get_by_email(email).await? {
+        if let Ok(user) = self.user_repository.get_by_email(email).await {
             if !verify(password, &user.password).map_err(|_| Error::VerifyPasswordFailed)? {
                 return Err(Error::LoginFailed);
             }

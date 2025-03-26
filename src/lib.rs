@@ -40,7 +40,7 @@ pub fn only_role(attr: TokenStream, item: TokenStream) -> TokenStream {
             let allowed_roles: Vec<String> = vec![#(#roles),*].iter().map(|s| s.to_string()).collect();
 
             // Check the user's role
-            if !allowed_roles.contains(&claims.role) {
+            if !allowed_roles.contains(&caller.role) {
                 return Err(Error::AccessDenied);
             }
 
