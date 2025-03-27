@@ -31,8 +31,14 @@ pub struct CreateQuizQuestionRequest {
 pub struct UpdateQuizQuestionRequest {
     pub question_content: Option<String>,
     pub answers: Option<Vec<QuizQuestionAnswer>>,
-    pub previous_question_id: Option<Uuid>,
-    pub next_question_id: Option<Uuid>,
+    pub index: Option<i32>,
+    pub point: Option<i32>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateManyQuizQuestionsRequest {
+    pub question_id: Uuid,
+    pub content: UpdateQuizQuestionRequest,
 }
 
 #[derive(Debug, Serialize)]

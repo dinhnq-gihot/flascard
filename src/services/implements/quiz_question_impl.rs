@@ -1,6 +1,6 @@
 use {
     crate::{
-        entities::{quiz_question_answers, quiz_questions},
+        entities::quiz_questions,
         enums::error::*,
         models::{
             quiz::UpdateQuizRequest,

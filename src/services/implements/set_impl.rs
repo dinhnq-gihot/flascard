@@ -39,9 +39,21 @@ impl SetService for SetServiceImpl {
         self.set_repository.get_by_id(id).await
     }
 
-    async fn get_all(&self) -> Result<Vec<sets::Model>> {
-        self.set_repository.get_all_set().await
+    async fn get_all(&self, user_id: Uuid) -> Result<AllSetsOfUserResponse> {
+        let owned_sets = self.set_repository.get_by_owner_id(user_id).await?;
+        let shared_sets = self
+            .set_repository
+            .get_all_shared_sets_of_user(user_id)
+            .await?;
+        Ok(AllSetsOfUserResponse {
+            owned_sets,
+            shared_sets,
+        })
     }
+
+    // async fn get_all(&self) -> Result<Vec<sets::Model>> {
+    //     self.set_repository.get_all_set().await
+    // }
 
     async fn update(
         &self,
@@ -65,18 +77,6 @@ impl SetService for SetServiceImpl {
     async fn delete(&self, caller_id: Uuid, set_id: Uuid) -> Result<()> {
         self.set_repository.is_owner(set_id, caller_id).await?;
         self.set_repository.delete_one(set_id).await
-    }
-
-    async fn get_all_sets_of_user(&self, user_id: Uuid) -> Result<AllSetsOfUserResponse> {
-        let owned_sets = self.set_repository.get_by_owner_id(user_id).await?;
-        let shared_sets = self
-            .set_repository
-            .get_all_shared_sets_of_user(user_id)
-            .await?;
-        Ok(AllSetsOfUserResponse {
-            owned_sets,
-            shared_sets,
-        })
     }
 
     async fn share(

@@ -2,7 +2,11 @@ use {
     crate::{
         m20250223_061404_create_users_table::Users, m20250223_070735_create_quizes_table::Quizes,
     },
-    sea_orm_migration::{prelude::*, schema::*},
+    sea_orm_migration::{
+        prelude::{extension::postgres::Type, *},
+        schema::*,
+        sea_orm::{EnumIter, Iterable},
+    },
 };
 
 #[derive(DeriveMigrationName)]
@@ -11,6 +15,15 @@ pub struct Migration;
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        manager
+            .create_type(
+                Type::create()
+                    .as_enum(StatusEnum)
+                    .values(Status::iter())
+                    .to_owned(),
+            )
+            .await?;
+
         manager
             .create_table(
                 Table::create()
@@ -23,7 +36,11 @@ impl MigrationTrait for Migration {
                     .col(timestamp_null(Tests::StartedAt))
                     .col(timestamp_null(Tests::SubmittedAt))
                     .col(unsigned(Tests::Duration)) // Duration in seconds
+                    .col(uuid(Tests::CurrentQuizQuestion))
+                    .col(unsigned(Tests::RemainingTime))
+                    .col(unsigned(Tests::CompletedQuestions))
                     .col(unsigned(Tests::TotalQuestion))
+                    .col(enumeration(Tests::Status, StatusEnum, Status::iter()).default("NotStart"))
                     .col(timestamp(Tests::CreatedAt).default(Expr::current_timestamp()))
                     .foreign_key(
                         ForeignKey::create()
@@ -52,6 +69,21 @@ impl MigrationTrait for Migration {
 }
 
 #[derive(DeriveIden)]
+struct StatusEnum;
+
+#[derive(Iden, EnumIter)]
+pub enum Status {
+    #[iden = "NotStart"]
+    NotStart,
+    #[iden = "InProgess"]
+    InProgess,
+    #[iden = "Submitted"]
+    Submitted,
+    #[iden = "Abandoned"]
+    Abandoned,
+}
+
+#[derive(DeriveIden)]
 pub enum Tests {
     Table,
     Id,
@@ -61,6 +93,11 @@ pub enum Tests {
     StartedAt,
     SubmittedAt,
     Duration,
+    CurrentQuizQuestion,
+    RemainingTime,
+    CompletedQuestions,
     TotalQuestion,
+    #[sea_orm(iden = "status")]
+    Status,
     CreatedAt,
 }

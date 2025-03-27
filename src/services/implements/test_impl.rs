@@ -97,7 +97,7 @@ impl TestService for TestServiceImpl {
 
     async fn get_by_id(&self, caller_id: Uuid, test_id: Uuid) -> Result<TestResponse> {
         let (test, test_state) = self.test_repository.get_one(test_id).await?;
-        let quiz = self.quiz_service.get_by_id(test.quiz_id).await?;
+        let quiz = self.quiz_service.get_by_id(caller_id, test.quiz_id).await?;
         let set = self.set_service.get_by_id(quiz.set_id).await?;
 
         let status = check_test_status(test.started_at, test.submitted_at);
@@ -125,7 +125,7 @@ impl TestService for TestServiceImpl {
         })
     }
 
-    async fn create(&self, payload: CreateTest) -> Result<CreateTestResponse> {
+    async fn create(&self, caller_id: Uuid, payload: CreateTest) -> Result<CreateTestResponse> {
         // tạo 1 đối tượng Test với quiz_id và duration
         let test = self
             .test_repository
@@ -133,7 +133,7 @@ impl TestService for TestServiceImpl {
             .await?;
 
         // lấy quiz và set để trả về cho response
-        let quiz = self.quiz_service.get_by_id(test.quiz_id).await?;
+        let quiz = self.quiz_service.get_by_id(caller_id, test.quiz_id).await?;
         let set = self.set_service.get_by_id(quiz.set_id).await?;
 
         Ok(CreateTestResponse {

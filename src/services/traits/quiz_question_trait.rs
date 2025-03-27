@@ -1,6 +1,6 @@
 use {
     crate::{
-        entities::{quiz_question_answers, quiz_questions},
+        entities::quiz_questions,
         enums::error::*,
         models::quiz_question::{
             CreateQuizQuestionRequest, QuizQuestionResponse, UpdateQuizQuestionRequest,
@@ -26,6 +26,10 @@ pub trait QuizQuestionService: Sync + Send {
         quiz_question_id: Uuid,
         payload: UpdateQuizQuestionRequest,
     ) -> Result<Option<QuizQuestionResponse>>;
+
+    async fn update_many() {
+        
+    }
 
     async fn delete(&self, caller_id: Uuid, quiz_id: Uuid, quiz_question_id: Uuid) -> Result<()>;
 

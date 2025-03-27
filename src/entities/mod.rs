@@ -11,6 +11,5 @@ pub mod sets;
 pub mod shared_quizes;
 pub mod shared_sets;
 pub mod test_results;
-pub mod test_states;
 pub mod tests;
 pub mod users;

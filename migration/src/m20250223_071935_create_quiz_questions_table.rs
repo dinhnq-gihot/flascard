@@ -26,8 +26,9 @@ impl MigrationTrait for Migration {
                         QuestionTypeEnum,
                         QuestionType::iter(),
                     ))
-                    .col(uuid_null(QuizQuestions::NextQuestion))
-                    .col(uuid_null(QuizQuestions::PreviousQuestion))
+                    .col(integer(QuizQuestions::Index))
+                    .col(unsigned(QuizQuestions::Point))
+                    .col(text(QuizQuestions::Explanation))
                     .col(timestamp(QuizQuestions::CreatedAt).default(Expr::current_timestamp()))
                     .col(timestamp(QuizQuestions::UpdatedAt).default(Expr::current_timestamp()))
                     .col(boolean(QuizQuestions::IsDeleted).default(false))
@@ -45,48 +46,6 @@ impl MigrationTrait for Migration {
                             .to(Questions::Table, Questions::Id)
                             .on_delete(ForeignKeyAction::SetNull),
                     )
-                    .foreign_key(
-                        ForeignKey::create()
-                            .from(QuizQuestions::Table, QuizQuestions::NextQuestion)
-                            .to(QuizQuestions::Table, QuizQuestions::Id)
-                            .on_delete(ForeignKeyAction::SetNull),
-                    )
-                    .foreign_key(
-                        ForeignKey::create()
-                            .from(QuizQuestions::Table, QuizQuestions::PreviousQuestion)
-                            .to(QuizQuestions::Table, QuizQuestions::Id)
-                            .on_delete(ForeignKeyAction::SetNull),
-                    )
-                    .to_owned(),
-            )
-            .await?;
-
-        // Adding quiz_question_id foreign keys for quiz later to prevent dependency
-        // issues
-        let fk_quizes_start_question_id = TableForeignKey::new()
-            .name("fk_quizes_start_question_id")
-            .from_tbl(Quizes::Table)
-            .from_col(Quizes::StartQuestion)
-            .to_tbl(QuizQuestions::Table)
-            .to_col(QuizQuestions::Id)
-            .on_delete(ForeignKeyAction::SetNull)
-            .to_owned();
-
-        let fk_quizes_last_question_id = TableForeignKey::new()
-            .name("fk_quizes_last_question_id")
-            .from_tbl(Quizes::Table)
-            .from_col(Quizes::LastQuestion)
-            .to_tbl(QuizQuestions::Table)
-            .to_col(QuizQuestions::Id)
-            .on_delete(ForeignKeyAction::SetNull)
-            .to_owned();
-
-        manager
-            .alter_table(
-                Table::alter()
-                    .table(Quizes::Table)
-                    .add_foreign_key(&fk_quizes_start_question_id)
-                    .add_foreign_key(&fk_quizes_last_question_id)
                     .to_owned(),
             )
             .await?;
@@ -119,8 +78,9 @@ pub enum QuizQuestions {
     QuestionId,
     QuestionContent,
     Type,
-    NextQuestion,
-    PreviousQuestion,
+    Index,
+    Point,
+    Explanation,
     CreatedAt,
     UpdatedAt,
     IsDeleted,

@@ -33,3 +33,15 @@ pub enum RoleEnum {
     #[sea_orm(string_value = "User")]
     User,
 }
+#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
+#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "status_enum")]
+pub enum StatusEnum {
+    #[sea_orm(string_value = "NotStart")]
+    NotStart,
+    #[sea_orm(string_value = "InProgess")]
+    InProgess,
+    #[sea_orm(string_value = "Submitted")]
+    Submitted,
+    #[sea_orm(string_value = "Abandoned")]
+    Abandoned,
+}

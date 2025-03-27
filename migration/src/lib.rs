@@ -10,7 +10,7 @@ mod m20250223_072007_create_quiz_question_anwsers_table;
 mod m20250223_072118_create_shared_quizes_table;
 mod m20250223_072123_create_shared_sets_table;
 mod m20250223_075910_create_tests_table;
-mod m20250223_075918_create_test_states_table;
+// mod m20250223_075918_create_test_states_table;
 mod m20250223_075930_create_test_results_table;
 
 pub struct Migrator;
@@ -29,7 +29,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20250223_072118_create_shared_quizes_table::Migration),
             Box::new(m20250223_072123_create_shared_sets_table::Migration),
             Box::new(m20250223_075910_create_tests_table::Migration),
-            Box::new(m20250223_075918_create_test_states_table::Migration),
+            // Box::new(m20250223_075918_create_test_states_table::Migration),
             Box::new(m20250223_075930_create_test_results_table::Migration),
         ]
     }

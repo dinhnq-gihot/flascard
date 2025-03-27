@@ -16,6 +16,7 @@ pub struct Model {
     pub email: String,
     pub password: String,
     pub role: RoleEnum,
+    pub avatar_url: String,
     pub created_at: DateTime,
     pub updated_at: DateTime,
     pub is_deleted: bool,

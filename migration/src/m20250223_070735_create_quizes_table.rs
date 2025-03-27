@@ -18,11 +18,10 @@ impl MigrationTrait for Migration {
                     .col(uuid(Quizes::SetId))
                     .col(uuid(Quizes::CreatorId))
                     .col(string(Quizes::Name))
-                    .col(boolean(Quizes::PublicOrNot).default(false))
+                    .col(boolean(Quizes::IsPublic).default(false))
                     .col(json(Quizes::QuestionCounts))
-                    .col(uuid_null(Quizes::StartQuestion))
-                    .col(uuid_null(Quizes::LastQuestion))
                     .col(boolean(Quizes::IsPublished).default(false))
+                    .col(unsigned(Quizes::TotalPoint).default(0))
                     .col(timestamp(Quizes::CreatedAt).default(Expr::current_timestamp()))
                     .col(timestamp(Quizes::UpdatedAt).default(Expr::current_timestamp()))
                     .col(boolean(Quizes::IsDeleted).default(false))
@@ -59,11 +58,10 @@ pub enum Quizes {
     SetId,
     CreatorId,
     Name,
-    PublicOrNot,
+    IsPublic,
     QuestionCounts,
-    StartQuestion,
-    LastQuestion,
     IsPublished,
+    TotalPoint,
     CreatedAt,
     UpdatedAt,
     IsDeleted,

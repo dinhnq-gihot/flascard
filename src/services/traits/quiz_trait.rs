@@ -26,11 +26,16 @@ pub trait QuizService: Send + Sync {
     ) -> Result<Option<quizes::Model>>;
     async fn delete_one(&self, quiz_id: Uuid, caller: Uuid) -> Result<()>;
     async fn get_by_id(&self, caller_id: Uuid, quiz_id: Uuid) -> Result<quizes::Model>;
-    async fn get_all(
+
+    // lấy toàn bộ quiz mà user tạo/được share/public
+    async fn get_all_by_user(
         &self,
         caller_id: Uuid,
         params: FilterQuizParams,
     ) -> Result<Vec<quizes::Model>>;
+
+    // lay toàn bộ quiz được public
+    async fn get_all_public(&self, params: FilterQuizParams) -> Result<Vec<quizes::Model>>;
 
     // SHARE SESSION
     async fn share(

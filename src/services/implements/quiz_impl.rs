@@ -48,7 +48,7 @@ impl QuizService for QuizServiceImpl {
         self.quiz_repository.update_one(quiz_id, payload).await
     }
 
-    async fn delete_one(&self, quiz_id: Uuid, caller_id: Uuid) -> Result<()> {
+    async fn delete_one(&self, caller_id: Uuid, quiz_id: Uuid) -> Result<()> {
         let quiz = self.quiz_repository.get_by_id(quiz_id).await?;
         if caller_id != quiz.creator_id {
             return Err(Error::AccessDenied);
@@ -73,12 +73,16 @@ impl QuizService for QuizServiceImpl {
         self.quiz_repository.get_by_id(quiz_id).await
     }
 
-    async fn get_all(
+    async fn get_all_by_user(
         &self,
         caller_id: Uuid,
         params: FilterQuizParams,
     ) -> Result<Vec<quizes::Model>> {
         self.quiz_repository.get_all(caller_id, params).await
+    }
+
+    async fn get_all_public(&self, params: FilterQuizParams) -> Result<Vec<quizes::Model>> {
+        self.quiz_repository.get_all_public(params).await
     }
 
     async fn share(

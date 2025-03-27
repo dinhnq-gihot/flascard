@@ -16,8 +16,10 @@ pub struct Model {
     #[sea_orm(column_type = "Text")]
     pub question_content: String,
     pub r#type: QuestionTypeEnum,
-    pub next_question: Option<Uuid>,
-    pub previous_question: Option<Uuid>,
+    pub index: i32,
+    pub point: i32,
+    #[sea_orm(column_type = "Text")]
+    pub explanation: String,
     pub created_at: DateTime,
     pub updated_at: DateTime,
     pub is_deleted: bool,
@@ -35,22 +37,6 @@ pub enum Relation {
     Questions,
     #[sea_orm(has_many = "super::quiz_question_answers::Entity")]
     QuizQuestionAnswers,
-    #[sea_orm(
-        belongs_to = "Entity",
-        from = "Column::NextQuestion",
-        to = "Column::Id",
-        on_update = "NoAction",
-        on_delete = "SetNull"
-    )]
-    SelfRef2,
-    #[sea_orm(
-        belongs_to = "Entity",
-        from = "Column::PreviousQuestion",
-        to = "Column::Id",
-        on_update = "NoAction",
-        on_delete = "SetNull"
-    )]
-    SelfRef1,
     #[sea_orm(
         belongs_to = "super::quizes::Entity",
         from = "Column::QuizId",

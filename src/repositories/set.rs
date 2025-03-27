@@ -12,8 +12,8 @@ use {
     },
     chrono::Utc,
     sea_orm::{
-        sea_query::OnConflict, ActiveModelTrait, ColumnTrait, EntityTrait, JoinType, ModelTrait,
-        QueryFilter, QuerySelect, RelationTrait, Set,
+        sea_query::OnConflict, ActiveModelTrait, ColumnTrait, Condition, EntityTrait, JoinType,
+        ModelTrait, QueryFilter, QuerySelect, RelationTrait, Set,
     },
     std::sync::Arc,
     uuid::Uuid,
@@ -28,15 +28,30 @@ impl SetRepository {
         Self { db }
     }
 
-    pub async fn get_all_set(&self) -> Result<Vec<sets::Model>> {
+    // Khi lấy toàn bộ set mà user create hoặc được share 
+    // đối với create  
+    pub async fn get_all_sets_of_user(&self, caller_id: Uuid) -> Result<Vec<sets::Model>> {
         let conn = self.db.get_connection().await;
         Sets::find().all(&conn).await.map_err(Error::QueryFailed)
     }
 
-    pub async fn get_by_id(&self, id: Uuid) -> Result<sets::Model> {
+    pub async fn get_by_id(&self, caller_id: Uuid, set_id: Uuid) -> Result<sets::Model> {
         let conn = self.db.get_connection().await;
-        Sets::find_by_id(id)
-            .filter(sets::Column::IsDeleted.eq(false))
+        
+        // WHERE (owner_id = caller_id OR shared_sets.user_id = caller_id) 
+        // AND is_delete = false
+        let condition = Condition::all()
+            .add(
+                Condition::any().add(
+                    sets::Column::OwnerId
+                        .eq(caller_id)
+                        .add(shared_sets::Column::UserId.eq(caller_id)),
+                ),
+            )
+            .add(sets::Column::IsDeleted.eq(false));
+
+        Sets::find_by_id(set_id)
+            .filter(condition)
             .one(&conn)
             .await
             .map_err(Error::QueryFailed)?

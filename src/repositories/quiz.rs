@@ -9,8 +9,8 @@ use {
         models::quiz::{CreateQuizRequest, FilterQuizParams, UpdateQuizRequest},
     },
     sea_orm::{
-        sea_query::OnConflict, ActiveModelTrait, ColumnTrait, EntityTrait, ModelTrait, QueryFilter,
-        QueryOrder, Set,
+        sea_query::OnConflict, ActiveModelTrait, ColumnTrait, Condition, EntityTrait, JoinType,
+        ModelTrait, QueryFilter, QueryOrder, QuerySelect, RelationTrait, Set,
     },
     std::sync::Arc,
     uuid::Uuid,
@@ -130,16 +130,31 @@ impl QuizRepository {
         params: FilterQuizParams,
     ) -> Result<Vec<quizes::Model>> {
         let conn = self.db.get_connection().await;
-        let mut query = Quizes::find()
-            .filter(quizes::Column::CreatorId.eq(caller_id))
-            .filter(quizes::Column::IsDeleted.eq(false));
+        let mut condition = Condition::all().add(quizes::Column::IsDeleted.eq(false));
 
         if let Some(set_id) = params.set_id {
-            query = query.filter(quizes::Column::SetId.eq(set_id));
+            condition = condition.add(quizes::Column::SetId.eq(set_id));
         }
+        // filter theo user
+        // => nếu có creator_id trong query thì lấy creator_id theo creator_id hoặc
+        // caller_id và user được share =>
         if let Some(creator_id) = params.creator_id {
-            query = query.filter(quizes::Column::CreatorId.eq(creator_id));
+            condition = condition.add(
+                Condition::any()
+                    .add(quizes::Column::CreatorId.eq(creator_id))
+                    .add(quizes::Column::CreatorId.eq(caller_id))
+                    .add(shared_quizes::Column::UserId.eq(caller_id)),
+            );
+        } else {
+            condition = condition.add(
+                Condition::any()
+                    .add(quizes::Column::CreatorId.eq(caller_id))
+                    .add(shared_quizes::Column::UserId.eq(caller_id)),
+            );
         }
+        let query = Quizes::find()
+            .join(JoinType::InnerJoin, quizes::Relation::SharedQuizes.def())
+            .filter(condition);
 
         let query = match &params.sort_direction {
             Some(direction) if direction == "asc" => query.order_by_asc(quizes::Column::CreatedAt),
@@ -149,10 +164,33 @@ impl QuizRepository {
         query.all(&conn).await.map_err(Error::QueryFailed)
     }
 
+    pub async fn get_all_public(&self, params: FilterQuizParams) -> Result<Vec<quizes::Model>> {
+        let conn = self.db.get_connection().await;
+        let mut condition = Condition::all()
+            .add(quizes::Column::PublicOrNot.eq(true))
+            .add(quizes::Column::IsDeleted.eq(false));
+
+        if let Some(set_id) = params.set_id {
+            condition = condition.add(quizes::Column::SetId.eq(set_id));
+        }
+        if let Some(creator_id) = params.creator_id {
+            condition = condition.add(quizes::Column::CreatorId.eq(creator_id));
+        }
+
+        let query = Quizes::find().filter(condition);
+        let query = match &params.sort_direction {
+            Some(direction) if direction == "asc" => query.order_by_asc(quizes::Column::UpdatedAt),
+            _ => query.order_by_desc(quizes::Column::UpdatedAt),
+        };
+
+        query.all(&conn).await.map_err(Error::QueryFailed)
+    }
+
     pub async fn is_created_by(&self, quiz_id: Uuid, user_id: Uuid) -> Result<bool> {
         let conn = self.db.get_connection().await;
         let quiz = Quizes::find_by_id(quiz_id)
             .filter(quizes::Column::CreatorId.eq(user_id))
+            .filter(quizes::Column::IsDeleted.eq(false))
             .one(&conn)
             .await
             .map_err(Error::QueryFailed)?;

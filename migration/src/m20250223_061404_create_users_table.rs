@@ -37,6 +37,7 @@ impl MigrationTrait for Migration {
                     .col(string_uniq(Users::Email))
                     .col(string(Users::Password))
                     .col(enumeration(Users::Role, RoleEnum, Role::iter()).default("User"))
+                    .col(string(Users::AvatarUrl))
                     .col(timestamp(Users::CreatedAt).default(Expr::current_timestamp()))
                     .col(timestamp(Users::UpdatedAt).default(Expr::current_timestamp()))
                     .col(boolean(Users::IsDeleted).default(false))
@@ -65,6 +66,7 @@ pub enum Users {
     Password,
     #[sea_orm(iden = "role")]
     Role,
+    AvatarUrl,
     CreatedAt,
     UpdatedAt,
     IsDeleted,
