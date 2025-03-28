@@ -2,8 +2,7 @@ use {
     crate::{
         debug,
         enums::{error::Result, generic::into_ok_response},
-        models::user::{DeleteRequest, LoginRequest, RegisterUserRequest, UpdateUserRequest},
-        r#static::BLACKLIST_TOKEN_VEC,
+        models::user::{DeleteRequest, UpdateUserPassword, UpdateUserRequest, UpdateUserRole},
         server::AppState,
         utils::jwt::Claims,
     },
@@ -12,9 +11,9 @@ use {
     std::sync::Arc,
 };
 
-pub struct UserHandler;
+pub struct UserController;
 
-impl UserHandler {
+impl UserController {
     #[only_role("Staff")]
     pub async fn get_all_users(
         State(state): State<AppState>,
@@ -28,34 +27,8 @@ impl UserHandler {
         Ok(into_ok_response("success".into(), Some(users)))
     }
 
-    pub async fn register_user(
-        State(state): State<AppState>,
-        Json(payload): Json<RegisterUserRequest>,
-    ) -> Result<impl IntoResponse> {
-        debug!("register_user: {payload:?}");
-
-        let service = Arc::clone(&state.user_service);
-        let user = service.register_user(payload).await?;
-
-        Ok(into_ok_response(
-            "registered successfully".into(),
-            Some(user),
-        ))
-    }
-
-    pub async fn login(
-        State(state): State<AppState>,
-        Json(payload): Json<LoginRequest>,
-    ) -> Result<impl IntoResponse> {
-        debug!("login request: {payload:?}");
-
-        let service = Arc::clone(&state.user_service);
-        let res = service.login(payload).await?;
-
-        Ok(into_ok_response("login successfully".into(), Some(res)))
-    }
-
-    pub async fn update(
+    #[only_role("Staff", "User")]
+    pub async fn update_self(
         State(state): State<AppState>,
         Extension(caller): Extension<Claims>,
         Json(payload): Json<UpdateUserRequest>,
@@ -63,7 +36,44 @@ impl UserHandler {
         debug!("update request: {caller:?} {payload:?}");
 
         let service = Arc::clone(&state.user_service);
-        let res = service.update(caller.id, payload).await?;
+        let res = service.update_self(caller.id, payload).await?;
+
+        Ok(into_ok_response("Updated successfully".into(), res))
+    }
+
+    #[only_role("Staff", "User")]
+    pub async fn update_password(
+        State(state): State<AppState>,
+        Extension(caller): Extension<Claims>,
+        Json(payload): Json<UpdateUserPassword>,
+    ) -> Result<impl IntoResponse> {
+        debug!("update request: {caller:?} {payload:?}");
+
+        let UpdateUserPassword {
+            old_password,
+            new_password,
+        } = payload;
+
+        let service = Arc::clone(&state.user_service);
+        let res = service
+            .update_password(caller.id, old_password, new_password)
+            .await?;
+
+        Ok(into_ok_response("Updated successfully".into(), res))
+    }
+
+    #[only_role("Staff")]
+    pub async fn update_role(
+        State(state): State<AppState>,
+        Extension(caller): Extension<Claims>,
+        Json(payload): Json<UpdateUserRole>,
+    ) -> Result<impl IntoResponse> {
+        debug!("update request: {caller:?} {payload:?}");
+
+        let UpdateUserRole { user_id, new_role } = payload;
+
+        let service = Arc::clone(&state.user_service);
+        let res = service.update_role(caller.id, user_id, new_role).await?;
 
         Ok(into_ok_response("Updated successfully".into(), res))
     }
@@ -81,16 +91,6 @@ impl UserHandler {
 
         Ok(into_ok_response(
             "Deleted successfully".into(),
-            None::<String>,
-        ))
-    }
-
-    pub async fn logout(Extension(token): Extension<String>) -> Result<impl IntoResponse> {
-        debug!("logout: token: {token:?}");
-        BLACKLIST_TOKEN_VEC.lock().push(token);
-
-        Ok(into_ok_response(
-            "Logout successfully".into(),
             None::<String>,
         ))
     }

@@ -16,7 +16,7 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(pk_uuid(Sets::Id).default(Expr::cust("uuid_generate_v4()")))
                     // Add these new columns and foreign key
-                    .col(string(Sets::Name))
+                    .col(string_uniq(Sets::Name))
                     .col(uuid(Sets::OwnerId))
                     .col(string_null(Sets::Description))
                     .col(boolean(Sets::PublicOrNot).default(false))

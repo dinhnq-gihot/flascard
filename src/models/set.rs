@@ -1,6 +1,8 @@
 use {
     crate::entities::{sea_orm_active_enums::PermissionEnum, sets},
+    sea_orm::FromQueryResult,
     serde::{Deserialize, Serialize},
+    serde_json::Value as JsonValue,
     uuid::Uuid,
 };
 
@@ -24,10 +26,17 @@ pub struct ShareSetForUser {
     pub permission: Option<PermissionEnum>,
 }
 
+#[derive(Debug, Serialize, FromQueryResult)]
+pub struct SharedSetsWithPermission {
+    pub set: JsonValue,
+    pub permission: PermissionEnum,
+}
+
 #[derive(Debug, Serialize)]
 pub struct AllSetsOfUserResponse {
-    pub owned_sets: Vec<sets::Model>,
-    pub shared_sets: Vec<sets::Model>,
+    pub own_sets: Vec<sets::Model>,
+    pub shared_sets: Vec<SharedSetsWithPermission>,
+    pub public_sets: Vec<sets::Model>,
 }
 
 // pub struct AllUsersOfSetResponse {

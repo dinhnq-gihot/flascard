@@ -11,12 +11,13 @@ use {
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
+    #[sea_orm(unique)]
     pub name: String,
     #[sea_orm(unique)]
     pub email: String,
     pub password: String,
     pub role: RoleEnum,
-    pub avatar_url: String,
+    pub avatar_url: Option<String>,
     pub created_at: DateTime,
     pub updated_at: DateTime,
     pub is_deleted: bool,

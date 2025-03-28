@@ -55,16 +55,6 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .alter_table(
-                Table::alter()
-                    .table(Quizes::Table)
-                    .drop_foreign_key(Alias::new("fk_quizes_start_question_id"))
-                    .drop_foreign_key(Alias::new("fk_quizes_last_question_id"))
-                    .to_owned(),
-            )
-            .await?;
-
-        manager
             .drop_table(Table::drop().table(QuizQuestions::Table).to_owned())
             .await
     }

@@ -1,19 +1,18 @@
 use {
     crate::{
         db::db_connection::Database,
-        debug,
         entities::{
-            prelude::{Sets, SharedSets, Users},
+            prelude::{Sets, SharedSets},
             sea_orm_active_enums::PermissionEnum,
-            sets, shared_quizes, shared_sets, users,
+            sets, shared_quizes, shared_sets,
         },
         enums::error::*,
-        models::set::ShareSetForUser,
+        models::set::{AllSetsOfUserResponse, ShareSetForUser, SharedSetsWithPermission},
     },
     chrono::Utc,
     sea_orm::{
         sea_query::OnConflict, ActiveModelTrait, ColumnTrait, Condition, EntityTrait, JoinType,
-        ModelTrait, QueryFilter, QuerySelect, RelationTrait, Set,
+        QueryFilter, QuerySelect, RelationTrait, Set,
     },
     std::sync::Arc,
     uuid::Uuid,
@@ -28,24 +27,65 @@ impl SetRepository {
         Self { db }
     }
 
-    // Khi lấy toàn bộ set mà user create hoặc được share 
-    // đối với create  
-    pub async fn get_all_sets_of_user(&self, caller_id: Uuid) -> Result<Vec<sets::Model>> {
+    // Khi lấy toàn bộ set mà user create hoặc được share
+    // đối với create
+    // Done ✅
+    pub async fn get_all_sets_of_user(&self, caller_id: Uuid) -> Result<AllSetsOfUserResponse> {
         let conn = self.db.get_connection().await;
-        Sets::find().all(&conn).await.map_err(Error::QueryFailed)
+
+        let own_sets = Sets::find()
+            .filter(
+                Condition::all()
+                    .add(sets::Column::OwnerId.eq(caller_id))
+                    .add(sets::Column::IsDeleted.eq(false)),
+            )
+            .all(&conn)
+            .await
+            .map_err(Error::QueryFailed)?;
+        let shared_sets = Sets::find()
+            .column(shared_sets::Column::Permission)
+            .join(JoinType::InnerJoin, sets::Relation::SharedSets.def())
+            .filter(
+                Condition::all()
+                    .add(shared_sets::Column::UserId.eq(caller_id))
+                    .add(sets::Column::PublicOrNot.eq(false))
+                    .add(sets::Column::IsDeleted.eq(false)),
+            )
+            .into_model::<SharedSetsWithPermission>()
+            .all(&conn)
+            .await
+            .map_err(Error::QueryFailed)?;
+        let public_sets = Sets::find()
+            .filter(
+                Condition::all()
+                    .add(sets::Column::OwnerId.ne(caller_id))
+                    .add(sets::Column::PublicOrNot.eq(true))
+                    .add(sets::Column::IsDeleted.eq(false)),
+            )
+            .all(&conn)
+            .await
+            .map_err(Error::QueryFailed)?;
+
+        Ok(AllSetsOfUserResponse {
+            own_sets,
+            shared_sets,
+            public_sets,
+        })
     }
 
+    // Done ✅
     pub async fn get_by_id(&self, caller_id: Uuid, set_id: Uuid) -> Result<sets::Model> {
         let conn = self.db.get_connection().await;
-        
-        // WHERE (owner_id = caller_id OR shared_sets.user_id = caller_id) 
-        // AND is_delete = false
+
+        // WHERE (owner_id = caller_id OR shared_sets.user_id = caller_id OR
+        // public_or_not = true) AND is_delete = false
         let condition = Condition::all()
             .add(
                 Condition::any().add(
                     sets::Column::OwnerId
                         .eq(caller_id)
-                        .add(shared_sets::Column::UserId.eq(caller_id)),
+                        .add(shared_sets::Column::UserId.eq(caller_id))
+                        .add(sets::Column::PublicOrNot.eq(true)),
                 ),
             )
             .add(sets::Column::IsDeleted.eq(false));
@@ -58,16 +98,17 @@ impl SetRepository {
             .ok_or(Error::RecordNotFound)
     }
 
-    pub async fn get_by_owner_id(&self, owner_id: Uuid) -> Result<Vec<sets::Model>> {
-        let conn = self.db.get_connection().await;
-        Sets::find()
-            .filter(sets::Column::OwnerId.eq(owner_id))
-            .filter(sets::Column::IsDeleted.eq(false))
-            .all(&conn)
-            .await
-            .map_err(Error::QueryFailed)
-    }
+    // pub async fn get_by_owner_id(&self, owner_id: Uuid) ->
+    // Result<Vec<sets::Model>> {     let conn = self.db.get_connection().await;
+    //     Sets::find()
+    //         .filter(sets::Column::OwnerId.eq(owner_id))
+    //         .filter(sets::Column::IsDeleted.eq(false))
+    //         .all(&conn)
+    //         .await
+    //         .map_err(Error::QueryFailed)
+    // }
 
+    // Done ✅
     pub async fn create_one(
         &self,
         creator_id: Uuid,
@@ -93,16 +134,16 @@ impl SetRepository {
             .map_err(Error::InsertFailed)
     }
 
+    // Done ✅
     pub async fn update_one(
         &self,
-        id: Uuid,
+        set_id: Uuid,
         name: Option<String>,
         description: Option<String>,
         public_or_not: Option<bool>,
     ) -> Result<Option<sets::Model>> {
         let conn = self.db.get_connection().await;
-
-        let mut set: sets::ActiveModel = Sets::find_by_id(id)
+        let mut set: sets::ActiveModel = Sets::find_by_id(set_id)
             .filter(sets::Column::IsDeleted.eq(false))
             .one(&conn)
             .await
@@ -132,9 +173,10 @@ impl SetRepository {
         }
     }
 
-    pub async fn delete_one(&self, id: Uuid) -> Result<()> {
+    // Done ✅
+    pub async fn delete_one(&self, set_id: Uuid) -> Result<()> {
         let conn = self.db.get_connection().await;
-        let mut set: sets::ActiveModel = Sets::find_by_id(id)
+        let mut set: sets::ActiveModel = Sets::find_by_id(set_id)
             .filter(sets::Column::IsDeleted.eq(false))
             .one(&conn)
             .await
@@ -148,12 +190,16 @@ impl SetRepository {
         Ok(())
     }
 
+    // Done ✅
     pub async fn is_owner(&self, id: Uuid, user_id: Uuid) -> Result<()> {
         let conn = self.db.get_connection().await;
         // check owner permission first
         let _ = Sets::find_by_id(id)
-            .filter(sets::Column::OwnerId.eq(user_id))
-            .filter(sets::Column::IsDeleted.eq(false))
+            .filter(
+                Condition::all()
+                    .add(sets::Column::OwnerId.eq(user_id))
+                    .add(sets::Column::IsDeleted.eq(false)),
+            )
             .one(&conn)
             .await
             .map_err(Error::QueryFailed)?
@@ -162,17 +208,24 @@ impl SetRepository {
         Ok(())
     }
 
+    // Done ✅
     pub async fn check_permission(
         &self,
-        id: Uuid,
+        set_id: Uuid,
         user_id: Uuid,
         permission: PermissionEnum,
     ) -> Result<()> {
         let conn = self.db.get_connection().await;
+
+        // WHERE shared_sets.set_id = set_id AND shared_sets.user_id = user_id AND
+        // shared_sets.permission = permission
+        let condition = Condition::all()
+            .add(shared_sets::Column::SetId.eq(set_id))
+            .add(shared_sets::Column::UserId.eq(user_id))
+            .add(shared_sets::Column::Permission.eq(permission));
+
         let _ = SharedSets::find()
-            .filter(shared_sets::Column::SetId.eq(id))
-            .filter(shared_sets::Column::UserId.eq(user_id))
-            .filter(shared_sets::Column::Permission.eq(permission))
+            .filter(condition)
             .one(&conn)
             .await
             .map_err(Error::QueryFailed)?
@@ -181,6 +234,7 @@ impl SetRepository {
         Ok(())
     }
 
+    // Done ✅
     pub async fn create_share_set(
         &self,
         set_id: Uuid,
@@ -206,14 +260,17 @@ impl SetRepository {
             .collect::<Vec<Uuid>>();
         // delete all unshare users that had been shared before
         if !users_to_unshare.is_empty() {
+            let condition = Condition::all()
+                .add(shared_sets::Column::SetId.eq(set_id))
+                .add(shared_sets::Column::UserId.is_in(users_to_unshare));
+
             let deleted_shares = SharedSets::delete_many()
-                .filter(shared_sets::Column::SetId.eq(set_id))
-                .filter(shared_sets::Column::UserId.is_in(users_to_unshare))
+                .filter(condition)
                 .exec_with_returning(&conn)
                 .await
                 .map_err(Error::DeleteFailed)?;
 
-            debug!("users_to_unshare: {deleted_shares:?}");
+            println!("users_to_unshare: {deleted_shares:#?}");
         }
 
         let new_sharing_sets = sharing_users
@@ -241,52 +298,54 @@ impl SetRepository {
             .map_err(Error::InsertFailed)
     }
 
-    pub async fn get_shared_set(&self, set_id: Uuid, user_id: Uuid) -> Result<Option<sets::Model>> {
-        let conn = self.db.get_connection().await;
+    // pub async fn get_shared_set(&self, set_id: Uuid, user_id: Uuid) ->
+    // Result<Option<sets::Model>> {     let conn =
+    // self.db.get_connection().await;
 
-        Sets::find()
-            .join(JoinType::InnerJoin, sets::Relation::SharedSets.def())
-            .filter(shared_sets::Column::UserId.eq(user_id))
-            .filter(shared_sets::Column::UserId.eq(set_id))
-            .filter(sets::Column::IsDeleted.eq(false))
-            .one(&conn)
-            .await
-            .map_err(Error::QueryFailed)
-    }
+    //     Sets::find()
+    //         .join(JoinType::InnerJoin, sets::Relation::SharedSets.def())
+    //         .filter(shared_sets::Column::UserId.eq(user_id))
+    //         .filter(shared_sets::Column::UserId.eq(set_id))
+    //         .filter(sets::Column::IsDeleted.eq(false))
+    //         .one(&conn)
+    //         .await
+    //         .map_err(Error::QueryFailed)
+    // }
 
-    pub async fn get_all_shared_users_of_set(&self, set_id: Uuid) -> Result<Vec<users::Model>> {
-        let conn = self.db.get_connection().await;
+    // pub async fn get_all_shared_users_of_set(&self, set_id: Uuid) ->
+    // Result<Vec<users::Model>> {     let conn =
+    // self.db.get_connection().await;
 
-        Users::find()
-            .join(JoinType::InnerJoin, users::Relation::SharedSets.def())
-            .filter(shared_sets::Column::SetId.eq(set_id))
-            .filter(users::Column::IsDeleted.eq(false))
-            .all(&conn)
-            .await
-            .map_err(Error::QueryFailed)
-    }
+    //     Users::find()
+    //         .join(JoinType::InnerJoin, users::Relation::SharedSets.def())
+    //         .filter(shared_sets::Column::SetId.eq(set_id))
+    //         .filter(users::Column::IsDeleted.eq(false))
+    //         .all(&conn)
+    //         .await
+    //         .map_err(Error::QueryFailed)
+    // }
 
-    pub async fn get_all_shared_sets_of_user(&self, user_id: Uuid) -> Result<Vec<sets::Model>> {
-        let conn = self.db.get_connection().await;
+    // pub async fn get_all_shared_sets_of_user(&self, user_id: Uuid) ->
+    // Result<Vec<sets::Model>> {     let conn = self.db.get_connection().await;
 
-        let user = Users::find_by_id(user_id)
-            .one(&conn)
-            .await
-            .map_err(Error::QueryFailed)?
-            .ok_or(Error::RecordNotFound)?;
+    //     let user = Users::find_by_id(user_id)
+    //         .one(&conn)
+    //         .await
+    //         .map_err(Error::QueryFailed)?
+    //         .ok_or(Error::RecordNotFound)?;
 
-        user.find_related(Sets)
-            .filter(sets::Column::IsDeleted.eq(false))
-            .all(&conn)
-            .await
-            .map_err(Error::QueryFailed)
+    //     user.find_related(Sets)
+    //         .filter(sets::Column::IsDeleted.eq(false))
+    //         .all(&conn)
+    //         .await
+    //         .map_err(Error::QueryFailed)
 
-        // Sets::find()
-        //     .join(JoinType::InnerJoin, sets::Relation::SharedSets.def())
-        //     .filter(shared_sets::Column::UserId.eq(user_id))
-        //     .filter(sets::Column::IsDeleted.eq(false))
-        //     .all(&conn)
-        //     .await
-        //     .map_err(Error::QueryFailed)
-    }
+    //     // Sets::find()
+    //     //     .join(JoinType::InnerJoin, sets::Relation::SharedSets.def())
+    //     //     .filter(shared_sets::Column::UserId.eq(user_id))
+    //     //     .filter(sets::Column::IsDeleted.eq(false))
+    //     //     .all(&conn)
+    //     //     .await
+    //     //     .map_err(Error::QueryFailed)
+    // }
 }

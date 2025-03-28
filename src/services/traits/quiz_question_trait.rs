@@ -27,9 +27,9 @@ pub trait QuizQuestionService: Sync + Send {
         payload: UpdateQuizQuestionRequest,
     ) -> Result<Option<QuizQuestionResponse>>;
 
-    async fn update_many() {
-        
-    }
+    // async fn update_many() {
+
+    // }
 
     async fn delete(&self, caller_id: Uuid, quiz_id: Uuid, quiz_question_id: Uuid) -> Result<()>;
 

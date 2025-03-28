@@ -6,9 +6,9 @@ services:
     environment:
       POSTGRES_USER: username
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: diesel_demo
+      POSTGRES_DB: flashcard
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - flashcard_postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
 
@@ -23,4 +23,4 @@ services:
       - db
 
 volumes:
-  postgres_data:
+  flashcard_postgres_data:

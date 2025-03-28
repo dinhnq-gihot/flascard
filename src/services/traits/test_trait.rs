@@ -10,7 +10,7 @@ use {
 };
 
 #[async_trait::async_trait]
-pub trait TestService {
+pub trait TestService: Sync + Send {
     async fn get_all(
         &self,
         caller_id: Uuid,

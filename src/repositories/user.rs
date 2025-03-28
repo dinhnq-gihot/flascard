@@ -3,8 +3,11 @@ use {
         db::db_connection::Database,
         entities::{prelude::*, sea_orm_active_enums::RoleEnum, users},
         enums::error::{Error, Result},
+        models::user::{RegisterUserRequest, UpdateUserRequest},
     },
-    sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, Set},
+    sea_orm::{
+        ActiveModelTrait, ColumnTrait, Condition, EntityTrait, PaginatorTrait, QueryFilter, Set,
+    },
     std::sync::Arc,
     uuid::Uuid,
 };
@@ -18,6 +21,7 @@ impl UserRepository {
         Self { db }
     }
 
+    // Done ✅
     pub async fn get_all_users(&self) -> Result<Vec<users::Model>> {
         let conn = self.db.get_connection().await;
         Users::find()
@@ -27,6 +31,7 @@ impl UserRepository {
             .map_err(Error::QueryFailed)
     }
 
+    // Done ✅
     pub async fn get_by_id(&self, user_id: Uuid) -> Result<users::Model> {
         let conn = self.db.get_connection().await;
         Users::find_by_id(user_id)
@@ -37,20 +42,24 @@ impl UserRepository {
             .ok_or(Error::RecordNotFound)
     }
 
-    pub async fn create_user(
-        &self,
-        email: String,
-        password: String,
-        name: String,
-        role: RoleEnum,
-    ) -> Result<users::Model> {
+    // Done ✅
+    pub async fn create_user(&self, payload: RegisterUserRequest) -> Result<users::Model> {
         let conn = self.db.get_connection().await;
+
+        let RegisterUserRequest {
+            email,
+            password,
+            name,
+            role,
+            avatar_url,
+        } = payload;
 
         let new_user = users::ActiveModel {
             name: Set(name),
             email: Set(email),
             password: Set(password),
             role: Set(role),
+            avatar_url: Set(avatar_url),
             ..Default::default()
         };
 
@@ -60,23 +69,29 @@ impl UserRepository {
             .map_err(Error::InsertFailed)
     }
 
+    // Done ✅
     pub async fn update_user(
         &self,
-        id: Uuid,
-        name: Option<String>,
-        email: Option<String>,
-        password: Option<String>,
-        role: Option<RoleEnum>,
+        user_id: Uuid,
+        payload: UpdateUserRequest,
     ) -> Result<Option<users::Model>> {
         let conn = self.db.get_connection().await;
 
-        let mut user: users::ActiveModel = Users::find_by_id(id)
+        let mut user: users::ActiveModel = Users::find_by_id(user_id)
             .filter(users::Column::IsDeleted.eq(false))
             .one(&conn)
             .await
             .map_err(Error::QueryFailed)?
             .ok_or(Error::RecordNotFound)?
             .into();
+
+        let UpdateUserRequest {
+            name,
+            email,
+            password,
+            role,
+            avatar_url,
+        } = payload;
 
         let mut updated = false;
         if let Some(email) = email {
@@ -105,6 +120,10 @@ impl UserRepository {
             user.role = Set(role);
             updated = true;
         }
+        if let Some(avatar_url) = avatar_url {
+            user.avatar_url = Set(Some(avatar_url));
+            updated = true;
+        }
 
         if updated {
             user.updated_at = Set(chrono::Utc::now().naive_utc());
@@ -114,17 +133,22 @@ impl UserRepository {
         }
     }
 
+    // Done ✅
     pub async fn get_by_email(&self, email: String) -> Result<users::Model> {
         let conn = self.db.get_connection().await;
         Users::find()
-            .filter(users::Column::Email.eq(email))
-            .filter(users::Column::IsDeleted.eq(false))
+            .filter(
+                Condition::all()
+                    .add(users::Column::Email.eq(email))
+                    .add(users::Column::IsDeleted.eq(false)),
+            )
             .one(&conn)
             .await
             .map_err(Error::QueryFailed)?
             .ok_or(Error::RecordNotFound)
     }
 
+    // Done ✅
     pub async fn delete_user(&self, id: Uuid) -> Result<()> {
         let conn = self.db.get_connection().await;
         let mut user: users::ActiveModel = Users::find_by_id(id)
@@ -138,5 +162,21 @@ impl UserRepository {
         user.update(&conn).await.map_err(Error::DeleteFailed)?;
 
         Ok(())
+    }
+
+    pub async fn check_role(&self, user_id: Uuid, role: RoleEnum) -> Result<bool> {
+        let conn = self.db.get_connection().await;
+
+        let user = Users::find_by_id(user_id)
+            .filter(
+                Condition::all()
+                    .add(users::Column::Role.eq(role))
+                    .add(users::Column::IsDeleted.eq(true)),
+            )
+            .one(&conn)
+            .await
+            .map_err(Error::QueryFailed)?;
+
+        Ok(user.is_some())
     }
 }

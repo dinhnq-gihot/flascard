@@ -10,6 +10,7 @@ pub struct RegisterUserRequest {
     pub password: String,
     pub name: String,
     pub role: RoleEnum,
+    pub avatar_url: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -18,12 +19,28 @@ pub struct LoginRequest {
     pub password: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 pub struct UpdateUserRequest {
+    // for update info self
     pub name: Option<String>,
     pub email: Option<String>,
+    pub avatar_url: Option<String>,
+
     pub password: Option<String>,
+    // only staff update role
     pub role: Option<RoleEnum>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateUserPassword {
+    pub old_password: String,
+    pub new_password: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateUserRole {
+    pub user_id: Uuid,
+    pub new_role: RoleEnum,
 }
 
 #[derive(Debug, Deserialize)]
@@ -37,6 +54,7 @@ pub struct UserModel {
     pub email: String,
     pub name: String,
     pub role: RoleEnum,
+    pub avatar_url: Option<String>,
 }
 
 impl From<users::Model> for UserModel {
@@ -46,6 +64,7 @@ impl From<users::Model> for UserModel {
             email: value.email,
             name: value.name,
             role: value.role,
+            avatar_url: value.avatar_url,
         }
     }
 }
