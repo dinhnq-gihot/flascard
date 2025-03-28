@@ -14,9 +14,9 @@ use {
     uuid::Uuid,
 };
 
-pub struct SetHandler;
+pub struct SetController;
 
-impl SetHandler {
+impl SetController {
     pub async fn create(
         State(state): State<AppState>,
         Extension(caller): Extension<Claims>,
@@ -30,17 +30,21 @@ impl SetHandler {
 
     pub async fn get_by_id(
         State(state): State<AppState>,
+        Extension(caller): Extension<Claims>,
         Path(id): Path<Uuid>,
     ) -> Result<impl IntoResponse> {
         let service = Arc::clone(&state.set_service);
-        let set = service.get_by_id(id).await?;
+        let set = service.get_by_id(caller.id, id).await?;
 
         Ok(into_ok_response("Success".into(), Some(set)))
     }
 
-    pub async fn get_all(State(state): State<AppState>) -> Result<impl IntoResponse> {
+    pub async fn get_all(
+        State(state): State<AppState>,
+        Extension(caller): Extension<Claims>,
+    ) -> Result<impl IntoResponse> {
         let service = Arc::clone(&state.set_service);
-        let sets = service.get_all().await?;
+        let sets = service.get_all(caller.id).await?;
 
         Ok(into_ok_response("success".into(), Some(sets)))
     }
@@ -69,16 +73,6 @@ impl SetHandler {
             "Deleted successfully".into(),
             None::<String>,
         ))
-    }
-
-    pub async fn get_all_sets_of_user(
-        State(state): State<AppState>,
-        Path(user_id): Path<Uuid>,
-    ) -> Result<impl IntoResponse> {
-        let service = Arc::clone(&state.set_service);
-        let res = service.get_all_sets_of_user(user_id).await?;
-
-        Ok(into_ok_response("Success".into(), Some(res)))
     }
 
     pub async fn share(

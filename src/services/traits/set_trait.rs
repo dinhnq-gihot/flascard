@@ -33,7 +33,7 @@ pub trait SetService: Send + Sync {
     async fn get_all(&self, caller_id: Uuid) -> Result<AllSetsOfUserResponse>;
 
     // Get one set includes created by user or shared with or public
-    async fn get_by_id(&self, caller_id: Uuid, id: Uuid) -> Result<sets::Model>;
+    async fn get_by_id(&self, caller_id: Uuid, set_id: Uuid) -> Result<sets::Model>;
 
     // Share a set with other users or public
     async fn share(

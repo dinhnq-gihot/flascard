@@ -191,10 +191,11 @@ impl SetRepository {
     }
 
     // Done ✅
-    pub async fn is_owner(&self, id: Uuid, user_id: Uuid) -> Result<()> {
+    pub async fn is_owner(&self, id: Uuid, user_id: Uuid) -> Result<bool> {
         let conn = self.db.get_connection().await;
+
         // check owner permission first
-        let _ = Sets::find_by_id(id)
+        let res = Sets::find_by_id(id)
             .filter(
                 Condition::all()
                     .add(sets::Column::OwnerId.eq(user_id))
@@ -202,10 +203,9 @@ impl SetRepository {
             )
             .one(&conn)
             .await
-            .map_err(Error::QueryFailed)?
-            .ok_or(Error::PermissionDenied)?;
+            .map_err(Error::QueryFailed)?;
 
-        Ok(())
+        Ok(res.is_some())
     }
 
     // Done ✅
@@ -214,7 +214,7 @@ impl SetRepository {
         set_id: Uuid,
         user_id: Uuid,
         permission: PermissionEnum,
-    ) -> Result<()> {
+    ) -> Result<bool> {
         let conn = self.db.get_connection().await;
 
         // WHERE shared_sets.set_id = set_id AND shared_sets.user_id = user_id AND
@@ -224,14 +224,13 @@ impl SetRepository {
             .add(shared_sets::Column::UserId.eq(user_id))
             .add(shared_sets::Column::Permission.eq(permission));
 
-        let _ = SharedSets::find()
+        let res = SharedSets::find()
             .filter(condition)
             .one(&conn)
             .await
-            .map_err(Error::QueryFailed)?
-            .ok_or(Error::PermissionDenied)?;
+            .map_err(Error::QueryFailed)?;
 
-        Ok(())
+        Ok(res.is_some())
     }
 
     // Done ✅

@@ -1,5 +1,5 @@
 use {
-    crate::{controllers::set::*, middleware::jwt::check_jwt, server::AppState},
+    crate::{controllers::set::SetController, middleware::jwt::check_jwt, server::AppState},
     axum::{
         middleware,
         routing::{get, post},
@@ -9,15 +9,14 @@ use {
 
 pub fn get_set_router(state: &AppState) -> Router {
     Router::new()
-        .route("/", get(SetHandler::get_all).post(SetHandler::create))
+        .route("/", get(SetController::get_all).post(SetController::create))
         .route(
             "/{id}",
-            get(SetHandler::get_by_id)
-                .patch(SetHandler::update)
-                .delete(SetHandler::delete),
+            get(SetController::get_by_id)
+                .patch(SetController::update)
+                .delete(SetController::delete),
         )
-        .route("/users/{id}/sets/", get(SetHandler::get_all_sets_of_user))
-        .route("/{id}/share", post(SetHandler::share))
+        .route("/{id}/share", post(SetController::share))
         .layer(middleware::from_fn(check_jwt))
         .with_state(state.clone())
 }

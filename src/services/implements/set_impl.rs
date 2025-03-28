@@ -1,6 +1,6 @@
 use {
     crate::{
-        entities::{sets, shared_sets},
+        entities::{sea_orm_active_enums::PermissionEnum, sets, shared_sets},
         enums::error::*,
         models::set::{AllSetsOfUserResponse, CreateSetRequest, ShareSetForUser, UpdateSetRequest},
         repositories::set::SetRepository,
@@ -35,25 +35,13 @@ impl SetService for SetServiceImpl {
             .await
     }
 
-    async fn get_by_id(&self, id: Uuid) -> Result<sets::Model> {
-        self.set_repository.get_by_id(id).await
+    async fn get_by_id(&self, caller_id: Uuid, set_id: Uuid) -> Result<sets::Model> {
+        self.set_repository.get_by_id(caller_id, set_id).await
     }
 
-    async fn get_all(&self, user_id: Uuid) -> Result<AllSetsOfUserResponse> {
-        let owned_sets = self.set_repository.get_by_owner_id(user_id).await?;
-        let shared_sets = self
-            .set_repository
-            .get_all_shared_sets_of_user(user_id)
-            .await?;
-        Ok(AllSetsOfUserResponse {
-            owned_sets,
-            shared_sets,
-        })
+    async fn get_all(&self, caller_id: Uuid) -> Result<AllSetsOfUserResponse> {
+        self.set_repository.get_all_sets_of_user(caller_id).await
     }
-
-    // async fn get_all(&self) -> Result<Vec<sets::Model>> {
-    //     self.set_repository.get_all_set().await
-    // }
 
     async fn update(
         &self,
@@ -61,7 +49,15 @@ impl SetService for SetServiceImpl {
         set_id: Uuid,
         payload: UpdateSetRequest,
     ) -> Result<Option<sets::Model>> {
-        self.set_repository.is_owner(set_id, caller_id).await?;
+        // check caller is creator or shared of set
+        if !self.set_repository.is_owner(set_id, caller_id).await?
+            || !self
+                .set_repository
+                .check_permission(set_id, caller_id, PermissionEnum::Edit)
+                .await?
+        {
+            return Err(Error::PermissionDenied);
+        }
 
         let UpdateSetRequest {
             name,
@@ -75,7 +71,9 @@ impl SetService for SetServiceImpl {
     }
 
     async fn delete(&self, caller_id: Uuid, set_id: Uuid) -> Result<()> {
-        self.set_repository.is_owner(set_id, caller_id).await?;
+        if !self.set_repository.is_owner(set_id, caller_id).await? {
+            return Err(Error::PermissionDenied);
+        }
         self.set_repository.delete_one(set_id).await
     }
 
