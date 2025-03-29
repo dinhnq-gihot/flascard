@@ -37,6 +37,7 @@ impl MigrationTrait for Migration {
                     .col(json(Questions::Answers))
                     .col(uuid(Questions::SetId))
                     .col(uuid(Questions::CreatorId))
+                    .col(uuid_null(Questions::LatestUpdaterId))
                     .col(timestamp(Questions::CreatedAt).default(Expr::current_timestamp()))
                     .col(timestamp(Questions::UpdatedAt).default(Expr::current_timestamp()))
                     .col(boolean(Questions::IsDeleted).default(false))
@@ -53,6 +54,13 @@ impl MigrationTrait for Migration {
                             .from(Questions::Table, Questions::CreatorId)
                             .to(Users::Table, Users::Id)
                             .on_delete(ForeignKeyAction::Restrict),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk_Questionss_latest_updater_id")
+                            .from(Questions::Table, Questions::LatestUpdaterId)
+                            .to(Users::Table, Users::Id)
+                            .on_delete(ForeignKeyAction::SetNull),
                     )
                     .to_owned(),
             )
@@ -79,6 +87,7 @@ pub enum Questions {
     Answers,
     SetId,
     CreatorId,
+    LatestUpdaterId,
     CreatedAt,
     UpdatedAt,
     IsDeleted,

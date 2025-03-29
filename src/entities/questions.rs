@@ -16,6 +16,7 @@ pub struct Model {
     pub answers: Json,
     pub set_id: Uuid,
     pub creator_id: Uuid,
+    pub latest_updater_id: Option<Uuid>,
     pub created_at: DateTime,
     pub updated_at: DateTime,
     pub is_deleted: bool,
@@ -40,7 +41,15 @@ pub enum Relation {
         on_update = "NoAction",
         on_delete = "Restrict"
     )]
-    Users,
+    Users2,
+    #[sea_orm(
+        belongs_to = "super::users::Entity",
+        from = "Column::LatestUpdaterId",
+        to = "super::users::Column::Id",
+        on_update = "NoAction",
+        on_delete = "SetNull"
+    )]
+    Users1,
 }
 
 impl Related<super::quiz_questions::Entity> for Entity {
@@ -52,12 +61,6 @@ impl Related<super::quiz_questions::Entity> for Entity {
 impl Related<super::sets::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Sets.def()
-    }
-}
-
-impl Related<super::users::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Users.def()
     }
 }
 

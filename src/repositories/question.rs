@@ -46,9 +46,9 @@ impl QnARepository {
         Ok(question)
     }
 
-    pub async fn get_by_id(&self, id: Uuid) -> Result<questions::Model> {
+    pub async fn get_by_id(&self, question_id: Uuid) -> Result<questions::Model> {
         let conn = self.db.get_connection().await;
-        Questions::find_by_id(id)
+        Questions::find_by_id(question_id)
             .filter(questions::Column::IsDeleted.eq(false))
             .one(&conn)
             .await
@@ -58,6 +58,7 @@ impl QnARepository {
 
     pub async fn get_all(
         &self,
+        set_id: Uuid,
         params: QueryQuestionParams,
     ) -> Result<PaginatedResponse<questions::Model>> {
         let conn = self.db.get_connection().await;
@@ -70,12 +71,10 @@ impl QnARepository {
         if let Some(r#type) = params.r#type {
             query = query.filter(questions::Column::Type.eq(r#type));
         }
-        if let Some(set_id) = params.set_id {
-            query = query.filter(questions::Column::SetId.eq(set_id));
+        if let Some(creator_id) = params.creator_id {
+            query = query.filter(questions::Column::CreatorId.eq(creator_id));
         }
-        if let Some(user_id) = params.user_id {
-            query = query.filter(questions::Column::CreatorId.eq(user_id));
-        }
+        query = query.filter(questions::Column::SetId.eq(set_id));
 
         // 🔹 Apply sorting (default: created_at DESC)
         query = match &params.sort_by {
@@ -118,6 +117,7 @@ impl QnARepository {
         &self,
         id: Uuid,
         payload: UpdateQuestionRequest,
+        caller_id: Uuid,
     ) -> Result<Option<questions::Model>> {
         let conn = self.db.get_connection().await;
         let mut question: questions::ActiveModel = Questions::find_by_id(id)
@@ -141,6 +141,8 @@ impl QnARepository {
 
         if updated {
             question.updated_at = Set(Utc::now().naive_utc());
+            question.latest_updater_id = Set(Some(caller_id));
+
             Ok(Some(
                 question.update(&conn).await.map_err(Error::UpdateFailed)?,
             ))

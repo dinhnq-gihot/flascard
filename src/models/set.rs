@@ -1,10 +1,27 @@
 use {
-    crate::entities::{sea_orm_active_enums::PermissionEnum, sets},
-    sea_orm::FromQueryResult,
+    crate::entities::sets,
     serde::{Deserialize, Serialize},
-    serde_json::Value as JsonValue,
     uuid::Uuid,
 };
+
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Default)]
+pub enum SharedPermission {
+    #[default]
+    View = 0,
+    Comment = 1,
+    Edit = 2,
+}
+
+impl From<i32> for SharedPermission {
+    fn from(value: i32) -> Self {
+        match value {
+            0 => Self::View,
+            1 => Self::Comment,
+            2 => Self::Edit,
+            _ => Self::View,
+        }
+    }
+}
 
 #[derive(Debug, Deserialize)]
 pub struct CreateSetRequest {
@@ -23,13 +40,13 @@ pub struct UpdateSetRequest {
 #[derive(Debug, Deserialize)]
 pub struct ShareSetForUser {
     pub user_id: Uuid,
-    pub permission: Option<PermissionEnum>,
+    pub permission: Option<SharedPermission>,
 }
 
-#[derive(Debug, Serialize, FromQueryResult)]
+#[derive(Debug, Serialize)]
 pub struct SharedSetsWithPermission {
-    pub set: JsonValue,
-    pub permission: PermissionEnum,
+    pub set: sets::Model,
+    pub permission: SharedPermission,
 }
 
 #[derive(Debug, Serialize)]

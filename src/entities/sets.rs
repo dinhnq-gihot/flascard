@@ -15,6 +15,7 @@ pub struct Model {
     pub owner_id: Uuid,
     pub description: Option<String>,
     pub public_or_not: bool,
+    pub latest_updater_id: Option<Uuid>,
     pub created_at: DateTime,
     pub updated_at: DateTime,
     pub is_deleted: bool,
@@ -30,12 +31,20 @@ pub enum Relation {
     SharedSets,
     #[sea_orm(
         belongs_to = "super::users::Entity",
+        from = "Column::LatestUpdaterId",
+        to = "super::users::Column::Id",
+        on_update = "NoAction",
+        on_delete = "SetNull"
+    )]
+    Users2,
+    #[sea_orm(
+        belongs_to = "super::users::Entity",
         from = "Column::OwnerId",
         to = "super::users::Column::Id",
         on_update = "NoAction",
         on_delete = "Restrict"
     )]
-    Users,
+    Users1,
 }
 
 impl Related<super::questions::Entity> for Entity {

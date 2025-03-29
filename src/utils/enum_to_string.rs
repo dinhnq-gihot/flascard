@@ -1,17 +1,17 @@
 use {
-    crate::entities::sea_orm_active_enums::{PermissionEnum, QuestionTypeEnum, RoleEnum},
+    crate::entities::sea_orm_active_enums::{QuestionTypeEnum, RoleEnum},
     std::fmt,
 };
 
-impl fmt::Display for PermissionEnum {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::View => write!(f, "View"),
-            Self::Comment => write!(f, "Comment"),
-            Self::Edit => write!(f, "Edit"),
-        }
-    }
-}
+// impl fmt::Display for PermissionEnum {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         match self {
+//             Self::View => write!(f, "View"),
+//             Self::Comment => write!(f, "Comment"),
+//             Self::Edit => write!(f, "Edit"),
+//         }
+//     }
+// }
 
 impl fmt::Display for QuestionTypeEnum {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

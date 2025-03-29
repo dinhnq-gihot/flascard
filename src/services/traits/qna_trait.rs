@@ -25,11 +25,13 @@ pub trait QnAService: Sync + Send {
     async fn delete(&self, caller_id: Uuid, qna_id: Uuid) -> Result<()>;
 
     // Get a question with all answers
-    async fn get_by_id(&self, qna_id: Uuid) -> Result<questions::Model>;
+    async fn get_by_id(&self, caller_id: Uuid, qna_id: Uuid) -> Result<questions::Model>;
 
     // Get all questions according to the given params with pagination
-    async fn get_all(
+    async fn get_all_of_set(
         &self,
+        caller_id: Uuid,
+        set_id: Uuid,
         params: QueryQuestionParams,
     ) -> Result<PaginatedResponse<questions::Model>>;
 }

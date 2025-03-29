@@ -1,8 +1,11 @@
 use {
     crate::{
-        entities::{sea_orm_active_enums::PermissionEnum, sets, shared_sets},
+        entities::{sets, shared_sets},
         enums::error::*,
-        models::set::{AllSetsOfUserResponse, CreateSetRequest, ShareSetForUser, UpdateSetRequest},
+        models::set::{
+            AllSetsOfUserResponse, CreateSetRequest, ShareSetForUser, SharedPermission,
+            UpdateSetRequest,
+        },
         repositories::set::SetRepository,
         services::traits::set_trait::SetService,
     },
@@ -53,7 +56,7 @@ impl SetService for SetServiceImpl {
         if !self.set_repository.is_owner(set_id, caller_id).await?
             || !self
                 .set_repository
-                .check_permission(set_id, caller_id, PermissionEnum::Edit)
+                .check_share_permission(set_id, caller_id, SharedPermission::Edit)
                 .await?
         {
             return Err(Error::PermissionDenied);
@@ -66,7 +69,7 @@ impl SetService for SetServiceImpl {
         } = payload;
 
         self.set_repository
-            .update_one(set_id, name, description, public_or_not)
+            .update_one(set_id, name, description, public_or_not, caller_id)
             .await
     }
 
@@ -93,5 +96,20 @@ impl SetService for SetServiceImpl {
         }
 
         Err(Error::PermissionDenied)
+    }
+
+    async fn check_share_permission(
+        &self,
+        set_id: Uuid,
+        caller_id: Uuid,
+        permission: SharedPermission,
+    ) -> Result<bool> {
+        self.set_repository
+            .check_share_permission(set_id, caller_id, permission)
+            .await
+    }
+
+    async fn is_creator(&self, set_id: Uuid, caller_id: Uuid) -> Result<bool> {
+        self.set_repository.is_owner(set_id, caller_id).await
     }
 }

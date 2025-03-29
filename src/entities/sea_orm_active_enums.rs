@@ -6,16 +6,6 @@ use {
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
-#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "permission_enum")]
-pub enum PermissionEnum {
-    #[sea_orm(string_value = "View")]
-    View,
-    #[sea_orm(string_value = "Comment")]
-    Comment,
-    #[sea_orm(string_value = "Edit")]
-    Edit,
-}
-#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "question_type_enum")]
 pub enum QuestionTypeEnum {
     #[sea_orm(string_value = "MultipleChoice")]

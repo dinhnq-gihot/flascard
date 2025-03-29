@@ -28,8 +28,8 @@ pub struct UpdateQuestionRequest {
 pub struct QueryQuestionParams {
     pub content: Option<String>,
     pub r#type: Option<String>,
-    pub set_id: Option<Uuid>,
-    pub user_id: Option<Uuid>,
+    pub set_id: Uuid, // force
+    pub creator_id: Option<Uuid>,
     pub sort_by: Option<String>,
     pub sort_direction: Option<String>,
     pub page: Option<u64>,

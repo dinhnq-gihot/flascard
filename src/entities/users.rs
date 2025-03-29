@@ -25,24 +25,14 @@ pub struct Model {
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
-    #[sea_orm(has_many = "super::questions::Entity")]
-    Questions,
     #[sea_orm(has_many = "super::quizes::Entity")]
     Quizes,
-    #[sea_orm(has_many = "super::sets::Entity")]
-    Sets,
     #[sea_orm(has_many = "super::shared_quizes::Entity")]
     SharedQuizes,
     #[sea_orm(has_many = "super::shared_sets::Entity")]
     SharedSets,
     #[sea_orm(has_many = "super::tests::Entity")]
     Tests,
-}
-
-impl Related<super::questions::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Questions.def()
-    }
 }
 
 impl Related<super::shared_quizes::Entity> for Entity {

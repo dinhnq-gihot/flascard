@@ -2,7 +2,10 @@ use {
     crate::{
         entities::{sets, shared_sets},
         enums::error::*,
-        models::set::{AllSetsOfUserResponse, CreateSetRequest, ShareSetForUser, UpdateSetRequest},
+        models::set::{
+            AllSetsOfUserResponse, CreateSetRequest, ShareSetForUser, SharedPermission,
+            UpdateSetRequest,
+        },
     },
     async_trait::async_trait,
     uuid::Uuid,
@@ -42,4 +45,13 @@ pub trait SetService: Send + Sync {
         set_id: Uuid,
         payload: Vec<ShareSetForUser>,
     ) -> Result<Vec<shared_sets::Model>>;
+
+    async fn check_share_permission(
+        &self,
+        set_id: Uuid,
+        caller_id: Uuid,
+        permission: SharedPermission,
+    ) -> Result<bool>;
+
+    async fn is_creator(&self, set_id: Uuid, caller_id: Uuid) -> Result<bool>;
 }

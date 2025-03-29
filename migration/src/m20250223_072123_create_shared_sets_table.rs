@@ -1,10 +1,11 @@
-use sea_orm_migration::{
-    prelude::{extension::postgres::Type, *},
-    schema::*,
-    sea_orm::{EnumIter, Iterable},
+use {
+    crate::{m20250223_061404_create_users_table::Users, m20250223_064318_create_sets_table::Sets},
+    sea_orm_migration::{
+        prelude::{extension::postgres::Type, *},
+        schema::*,
+        sea_orm::{EnumIter, Iterable},
+    },
 };
-
-use crate::{m20250223_061404_create_users_table::Users, m20250223_064318_create_sets_table::Sets};
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -13,15 +14,6 @@ pub struct Migration;
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .create_type(
-                Type::create()
-                    .as_enum(PermissionEnum)
-                    .values(Permission::iter())
-                    .to_owned(),
-            )
-            .await?;
-
-        manager
             .create_table(
                 Table::create()
                     .table(SharedSets::Table)
@@ -29,10 +21,7 @@ impl MigrationTrait for Migration {
                     .col(uuid(SharedSets::SetId))
                     .col(uuid(SharedSets::UserId))
                     .col(timestamp(SharedSets::SharedAt).default(Expr::current_timestamp()))
-                    .col(
-                        enumeration(SharedSets::Permission, PermissionEnum, Permission::iter())
-                            .default("View"),
-                    )
+                    .col(integer(SharedSets::Permission).default(0))
                     .primary_key(
                         Index::create()
                             .name("pk_user_set")
@@ -61,10 +50,6 @@ impl MigrationTrait for Migration {
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
             .drop_table(Table::drop().table(SharedSets::Table).to_owned())
-            .await?;
-
-        manager
-            .drop_type(Type::drop().name(PermissionEnum).to_owned())
             .await
     }
 }
@@ -76,17 +61,4 @@ enum SharedSets {
     UserId,
     SharedAt,
     Permission,
-}
-
-#[derive(DeriveIden)]
-struct PermissionEnum;
-
-#[derive(Iden, EnumIter)]
-pub enum Permission {
-    #[iden = "View"]
-    View,
-    #[iden = "Comment"]
-    Comment,
-    #[iden = "Edit"]
-    Edit,
 }

@@ -15,9 +15,9 @@ use {
     uuid::Uuid,
 };
 
-pub struct QnAHandler;
+pub struct QnAController;
 
-impl QnAHandler {
+impl QnAController {
     pub async fn create(
         State(state): State<AppState>,
         Extension(caller): Extension<Claims>,
@@ -61,21 +61,25 @@ impl QnAHandler {
 
     pub async fn get_by_id(
         State(state): State<AppState>,
+        Extension(caller): Extension<Claims>,
         Path(qna_id): Path<Uuid>,
     ) -> Result<impl IntoResponse> {
         let service = Arc::clone(&state.qna_service);
-        let res = service.get_by_id(qna_id).await?;
+        let res = service.get_by_id(caller.id, qna_id).await?;
 
         Ok(into_ok_response("success".into(), Some(res)))
     }
 
     pub async fn get_all(
         State(state): State<AppState>,
+        Extension(caller): Extension<Claims>,
         Query(params): Query<QueryQuestionParams>,
     ) -> Result<impl IntoResponse> {
         let service = Arc::clone(&state.qna_service);
-        let res = service.get_all(params).await?;
-        
+        let res = service
+            .get_all_of_set(caller.id, params.set_id, params)
+            .await?;
+
         Ok(into_ok_response("success".into(), Some(res)))
     }
 }

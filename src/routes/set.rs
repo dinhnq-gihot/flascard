@@ -1,5 +1,7 @@
 use {
-    crate::{controllers::set::SetController, middleware::jwt::check_jwt, server::AppState},
+    crate::{
+        controllers::set_controller::SetController, middleware::jwt::check_jwt, server::AppState,
+    },
     axum::{
         middleware,
         routing::{get, post},

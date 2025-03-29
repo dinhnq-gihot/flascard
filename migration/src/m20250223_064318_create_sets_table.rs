@@ -20,6 +20,7 @@ impl MigrationTrait for Migration {
                     .col(uuid(Sets::OwnerId))
                     .col(string_null(Sets::Description))
                     .col(boolean(Sets::PublicOrNot).default(false))
+                    .col(uuid_null(Sets::LatestUpdaterId))
                     .col(timestamp(Sets::CreatedAt).default(Expr::current_timestamp()))
                     .col(timestamp(Sets::UpdatedAt).default(Expr::current_timestamp()))
                     .col(boolean(Sets::IsDeleted).default(false))
@@ -29,6 +30,13 @@ impl MigrationTrait for Migration {
                             .from(Sets::Table, Sets::OwnerId)
                             .to(Users::Table, Users::Id)
                             .on_delete(ForeignKeyAction::Restrict),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk_sets_latest_updater_id")
+                            .from(Sets::Table, Sets::LatestUpdaterId)
+                            .to(Users::Table, Users::Id)
+                            .on_delete(ForeignKeyAction::SetNull),
                     )
                     .to_owned(),
             )
@@ -50,6 +58,7 @@ pub enum Sets {
     OwnerId,
     Description,
     PublicOrNot,
+    LatestUpdaterId,
     CreatedAt,
     UpdatedAt,
     IsDeleted,

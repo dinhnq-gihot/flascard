@@ -3,17 +3,19 @@ use {
         db::db_connection::Database,
         entities::{
             prelude::{Sets, SharedSets},
-            sea_orm_active_enums::PermissionEnum,
             sets, shared_quizes, shared_sets,
         },
         enums::error::*,
-        models::set::{AllSetsOfUserResponse, ShareSetForUser, SharedSetsWithPermission},
+        models::set::{
+            AllSetsOfUserResponse, ShareSetForUser, SharedPermission, SharedSetsWithPermission,
+        },
     },
     chrono::Utc,
     sea_orm::{
         sea_query::OnConflict, ActiveModelTrait, ColumnTrait, Condition, EntityTrait, JoinType,
         QueryFilter, QuerySelect, RelationTrait, Set,
     },
+    serde_json::Value as JsonValue,
     std::sync::Arc,
     uuid::Uuid,
 };
@@ -33,6 +35,7 @@ impl SetRepository {
     pub async fn get_all_sets_of_user(&self, caller_id: Uuid) -> Result<AllSetsOfUserResponse> {
         let conn = self.db.get_connection().await;
 
+        // Lấy toàn bộ set sở hữu
         let own_sets = Sets::find()
             .filter(
                 Condition::all()
@@ -42,6 +45,8 @@ impl SetRepository {
             .all(&conn)
             .await
             .map_err(Error::QueryFailed)?;
+
+        // Lấy toàn bộ set được share mà chưa public
         let shared_sets = Sets::find()
             .column(shared_sets::Column::Permission)
             .join(JoinType::InnerJoin, sets::Relation::SharedSets.def())
@@ -51,10 +56,20 @@ impl SetRepository {
                     .add(sets::Column::PublicOrNot.eq(false))
                     .add(sets::Column::IsDeleted.eq(false)),
             )
-            .into_model::<SharedSetsWithPermission>()
+            .into_tuple::<(JsonValue, i32)>()
             .all(&conn)
             .await
-            .map_err(Error::QueryFailed)?;
+            .map_err(Error::QueryFailed)?
+            .into_iter()
+            .map(|s| {
+                SharedSetsWithPermission {
+                    set: serde_json::from_value::<sets::Model>(s.0).unwrap(),
+                    permission: s.1.into(),
+                }
+            })
+            .collect::<Vec<_>>();
+
+        // lấy toàn bộ set public mà không phải user sở hữu
         let public_sets = Sets::find()
             .filter(
                 Condition::all()
@@ -91,6 +106,7 @@ impl SetRepository {
             .add(sets::Column::IsDeleted.eq(false));
 
         Sets::find_by_id(set_id)
+            .join(JoinType::LeftJoin, sets::Relation::SharedSets.def())
             .filter(condition)
             .one(&conn)
             .await
@@ -141,6 +157,7 @@ impl SetRepository {
         name: Option<String>,
         description: Option<String>,
         public_or_not: Option<bool>,
+        caller_id: Uuid,
     ) -> Result<Option<sets::Model>> {
         let conn = self.db.get_connection().await;
         let mut set: sets::ActiveModel = Sets::find_by_id(set_id)
@@ -167,6 +184,8 @@ impl SetRepository {
 
         if updated {
             set.updated_at = Set(Utc::now().naive_utc());
+            set.latest_updater_id = Set(Some(caller_id));
+
             Ok(Some(set.update(&conn).await.map_err(Error::UpdateFailed)?))
         } else {
             Ok(None)
@@ -209,11 +228,11 @@ impl SetRepository {
     }
 
     // Done ✅
-    pub async fn check_permission(
+    pub async fn check_share_permission(
         &self,
         set_id: Uuid,
         user_id: Uuid,
-        permission: PermissionEnum,
+        permission: SharedPermission,
     ) -> Result<bool> {
         let conn = self.db.get_connection().await;
 
@@ -222,7 +241,7 @@ impl SetRepository {
         let condition = Condition::all()
             .add(shared_sets::Column::SetId.eq(set_id))
             .add(shared_sets::Column::UserId.eq(user_id))
-            .add(shared_sets::Column::Permission.eq(permission));
+            .add(shared_sets::Column::Permission.gte(permission as i32));
 
         let res = SharedSets::find()
             .filter(condition)
@@ -281,7 +300,7 @@ impl SetRepository {
                     ..Default::default()
                 };
                 if let Some(p) = u.permission {
-                    am.permission = Set(p);
+                    am.permission = Set(p as i32);
                 }
                 am
             })
