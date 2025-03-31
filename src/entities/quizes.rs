@@ -10,7 +10,6 @@ use {
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
-    pub set_id: Uuid,
     pub creator_id: Uuid,
     pub name: String,
     pub is_public: bool,
@@ -19,6 +18,7 @@ pub struct Model {
     pub total_point: i32,
     pub created_at: DateTime,
     pub updated_at: DateTime,
+    pub publish_at: Option<DateTime>,
     pub is_deleted: bool,
 }
 
@@ -26,14 +26,6 @@ pub struct Model {
 pub enum Relation {
     #[sea_orm(has_many = "super::quiz_questions::Entity")]
     QuizQuestions,
-    #[sea_orm(
-        belongs_to = "super::sets::Entity",
-        from = "Column::SetId",
-        to = "super::sets::Column::Id",
-        on_update = "NoAction",
-        on_delete = "Restrict"
-    )]
-    Sets,
     #[sea_orm(has_many = "super::shared_quizes::Entity")]
     SharedQuizes,
     #[sea_orm(has_many = "super::tests::Entity")]
@@ -51,12 +43,6 @@ pub enum Relation {
 impl Related<super::quiz_questions::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::QuizQuestions.def()
-    }
-}
-
-impl Related<super::sets::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Sets.def()
     }
 }
 

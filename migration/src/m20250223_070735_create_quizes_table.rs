@@ -15,7 +15,6 @@ impl MigrationTrait for Migration {
                     .table(Quizes::Table)
                     .if_not_exists()
                     .col(pk_uuid(Quizes::Id).default(Expr::cust("uuid_generate_v4()")))
-                    .col(uuid(Quizes::SetId))
                     .col(uuid(Quizes::CreatorId))
                     .col(string(Quizes::Name))
                     .col(boolean(Quizes::IsPublic).default(false))
@@ -24,14 +23,8 @@ impl MigrationTrait for Migration {
                     .col(unsigned(Quizes::TotalPoint).default(0))
                     .col(timestamp(Quizes::CreatedAt).default(Expr::current_timestamp()))
                     .col(timestamp(Quizes::UpdatedAt).default(Expr::current_timestamp()))
+                    .col(timestamp_null(Quizes::PublishAt))
                     .col(boolean(Quizes::IsDeleted).default(false))
-                    .foreign_key(
-                        ForeignKey::create()
-                            .name("fk_quizes_set_id")
-                            .from(Quizes::Table, Quizes::SetId)
-                            .to(Sets::Table, Sets::Id)
-                            .on_delete(ForeignKeyAction::Restrict),
-                    )
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk_quizes_creator_id")
@@ -55,7 +48,6 @@ impl MigrationTrait for Migration {
 pub enum Quizes {
     Table,
     Id,
-    SetId,
     CreatorId,
     Name,
     IsPublic,
@@ -64,5 +56,6 @@ pub enum Quizes {
     TotalPoint,
     CreatedAt,
     UpdatedAt,
+    PublishAt,
     IsDeleted,
 }

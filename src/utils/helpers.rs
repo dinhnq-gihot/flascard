@@ -1,4 +1,4 @@
-use chrono::NaiveDateTime;
+use {crate::models::quiz::QuestionCounts, chrono::NaiveDateTime};
 
 pub fn check_test_status(
     started_at: Option<NaiveDateTime>,
@@ -13,4 +13,8 @@ pub fn check_test_status(
     } else {
         "".into()
     }
+}
+
+pub fn total_question_count(counts: QuestionCounts) -> u64 {
+    counts.check_boxes + counts.check_boxes + counts.text_fill
 }

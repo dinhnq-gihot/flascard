@@ -1,8 +1,11 @@
 use {
     crate::{
-        entities::{quizes, shared_quizes, users},
-        enums::error::*,
-        models::quiz::{CreateQuizRequest, FilterQuizParams, UpdateQuizRequest},
+        entities::{quizes, shared_quizes},
+        enums::{error::*, generic::PaginatedResponse},
+        models::{
+            quiz::{CreateQuizRequest, FilterQuizParams, QuizWithVisibility, UpdateQuizRequest},
+            user::UserModel,
+        },
         repositories::quiz::QuizRepository,
         services::traits::quiz_trait::QuizService,
     },
@@ -23,23 +26,19 @@ impl QuizServiceImpl {
 
 #[async_trait]
 impl QuizService for QuizServiceImpl {
-    async fn create_one(
-        &self,
-        creator_id: Uuid,
-        payload: CreateQuizRequest,
-    ) -> Result<quizes::Model> {
+    async fn create(&self, creator_id: Uuid, payload: CreateQuizRequest) -> Result<quizes::Model> {
         self.quiz_repository.create_one(payload, creator_id).await
     }
 
-    async fn update_one(
+    async fn update(
         &self,
         caller_id: Uuid,
         quiz_id: Uuid,
         payload: UpdateQuizRequest,
     ) -> Result<Option<quizes::Model>> {
-        let quiz = self.quiz_repository.get_by_id(quiz_id).await?;
+        let quiz = self.quiz_repository.get_by_id(caller_id, quiz_id).await?;
         if caller_id != quiz.creator_id {
-            return Err(Error::AccessDenied);
+            return Err(Error::PermissionDenied);
         }
         if quiz.is_published {
             return Err(Error::Published);
@@ -48,41 +47,23 @@ impl QuizService for QuizServiceImpl {
         self.quiz_repository.update_one(quiz_id, payload).await
     }
 
-    async fn delete_one(&self, caller_id: Uuid, quiz_id: Uuid) -> Result<()> {
-        let quiz = self.quiz_repository.get_by_id(quiz_id).await?;
-        if caller_id != quiz.creator_id {
-            return Err(Error::AccessDenied);
+    async fn delete(&self, caller_id: Uuid, quiz_id: Uuid) -> Result<()> {
+        if self.is_created_by(quiz_id, caller_id).await? {
+            return self.quiz_repository.delete_one(quiz_id).await;
         }
-
-        self.quiz_repository.delete_one(quiz_id).await
+        Err(Error::PermissionDenied)
     }
 
     async fn get_by_id(&self, caller_id: Uuid, quiz_id: Uuid) -> Result<quizes::Model> {
-        if !self
-            .quiz_repository
-            .is_created_by(quiz_id, caller_id)
-            .await?
-            || !self
-                .quiz_repository
-                .is_shared_with(quiz_id, caller_id)
-                .await?
-        {
-            return Err(Error::PermissionDenied);
-        }
-
-        self.quiz_repository.get_by_id(quiz_id).await
+        self.quiz_repository.get_by_id(caller_id, quiz_id).await
     }
 
-    async fn get_all_by_user(
+    async fn get_all(
         &self,
         caller_id: Uuid,
         params: FilterQuizParams,
-    ) -> Result<Vec<quizes::Model>> {
+    ) -> Result<PaginatedResponse<QuizWithVisibility>> {
         self.quiz_repository.get_all(caller_id, params).await
-    }
-
-    async fn get_all_public(&self, params: FilterQuizParams) -> Result<Vec<quizes::Model>> {
-        self.quiz_repository.get_all_public(params).await
     }
 
     async fn share(
@@ -91,7 +72,7 @@ impl QuizService for QuizServiceImpl {
         quiz_id: Uuid,
         new_participants: Vec<Uuid>,
     ) -> Result<Vec<shared_quizes::Model>> {
-        let quiz = self.quiz_repository.get_by_id(quiz_id).await?;
+        let quiz = self.quiz_repository.get_by_id(caller_id, quiz_id).await?;
         if caller_id != quiz.creator_id {
             return Err(Error::AccessDenied);
         }
@@ -101,16 +82,22 @@ impl QuizService for QuizServiceImpl {
             .await
     }
 
-    async fn get_all_shared_quizzes_of_user(&self, user_id: Uuid) -> Result<Vec<quizes::Model>> {
-        self.quiz_repository
-            .get_all_shared_quizzes_of_user(user_id)
-            .await
-    }
-
-    async fn get_all_shared_users_of_quiz(&self, quiz_id: Uuid) -> Result<Vec<users::Model>> {
-        self.quiz_repository
-            .get_all_shared_users_of_quiz(quiz_id)
-            .await
+    async fn get_all_shared_users_of_quiz(
+        &self,
+        caller_id: Uuid,
+        quiz_id: Uuid,
+    ) -> Result<Vec<UserModel>> {
+        if self
+            .quiz_repository
+            .is_created_by(quiz_id, caller_id)
+            .await?
+        {
+            return self
+                .quiz_repository
+                .get_all_shared_users_of_quiz(quiz_id)
+                .await;
+        }
+        Err(Error::PermissionDenied)
     }
 
     async fn is_created_by(&self, quiz_id: Uuid, user_id: Uuid) -> Result<bool> {
