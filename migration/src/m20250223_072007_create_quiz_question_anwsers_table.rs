@@ -16,7 +16,7 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(pk_uuid(QuizQuestionAnswers::Id).default(Expr::cust("uuid_generate_v4()")))
                     .col(uuid(QuizQuestionAnswers::QuizQuestionId))
-                    .col(text(QuizQuestionAnswers::AnswerContent))
+                    .col(text(QuizQuestionAnswers::Content))
                     .col(boolean(QuizQuestionAnswers::IsAnswer))
                     .col(
                         timestamp(QuizQuestionAnswers::CreatedAt)
@@ -54,7 +54,7 @@ enum QuizQuestionAnswers {
     Table,
     Id,
     QuizQuestionId,
-    AnswerContent,
+    Content,
     IsAnswer,
     CreatedAt,
     UpdatedAt,

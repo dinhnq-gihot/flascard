@@ -19,7 +19,7 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(pk_uuid(QuizQuestions::Id).default(Expr::cust("uuid_generate_v4()")))
                     .col(uuid(QuizQuestions::QuizId))
-                    .col(uuid_null(QuizQuestions::QuestionId))
+                    .col(uuid_null(QuizQuestions::SampleId))
                     .col(text(QuizQuestions::QuestionContent))
                     .col(enumeration(
                         QuizQuestions::Type,
@@ -28,7 +28,7 @@ impl MigrationTrait for Migration {
                     ))
                     .col(integer(QuizQuestions::Index))
                     .col(unsigned(QuizQuestions::Point))
-                    .col(text(QuizQuestions::Explanation))
+                    .col(text_null(QuizQuestions::Explanation))
                     .col(timestamp(QuizQuestions::CreatedAt).default(Expr::current_timestamp()))
                     .col(timestamp(QuizQuestions::UpdatedAt).default(Expr::current_timestamp()))
                     .col(boolean(QuizQuestions::IsDeleted).default(false))
@@ -41,8 +41,8 @@ impl MigrationTrait for Migration {
                     )
                     .foreign_key(
                         ForeignKey::create()
-                            .name("fk_QuizQuestions_question_id")
-                            .from(QuizQuestions::Table, QuizQuestions::QuestionId)
+                            .name("fk_QuizQuestions_sample_id")
+                            .from(QuizQuestions::Table, QuizQuestions::SampleId)
                             .to(Questions::Table, Questions::Id)
                             .on_delete(ForeignKeyAction::SetNull),
                     )
@@ -65,7 +65,7 @@ pub enum QuizQuestions {
     Table,
     Id,
     QuizId,
-    QuestionId,
+    SampleId,
     QuestionContent,
     Type,
     Index,

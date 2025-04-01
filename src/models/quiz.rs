@@ -6,9 +6,9 @@ use {
 
 #[derive(Debug, Deserialize, Serialize, Default)]
 pub struct QuestionCounts {
-    pub multiple_choices: u64,
-    pub check_boxes: u64,
-    pub text_fill: u64,
+    pub multiple_choices: i32,
+    pub check_boxes: i32,
+    pub text_fill: i32,
 }
 
 #[derive(Debug, Deserialize)]

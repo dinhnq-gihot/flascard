@@ -96,7 +96,7 @@ impl From<quiz_question_answers::Model> for TestingAnswer {
     fn from(value: quiz_question_answers::Model) -> Self {
         Self {
             id: value.id,
-            content: value.answer_content,
+            content: value.content,
         }
     }
 }

@@ -14,6 +14,10 @@ pub enum Error {
     DatabaseConnectionFailed(#[source] DbErr),
     #[error("Database migration failed")]
     DatabaseMigrationFailed,
+    #[error("Begin transaction failed: {0}")]
+    BeginTransactionFailed(#[source] DbErr),
+    #[error("Begin transaction failed: {0}")]
+    CommitTransactionFailed(#[source] DbErr),
     #[error("Insert failed: {0}")]
     InsertFailed(#[source] DbErr),
     #[error("Query failed {0}")]

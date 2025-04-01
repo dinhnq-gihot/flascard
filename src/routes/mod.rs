@@ -2,16 +2,17 @@ use {
     crate::{controllers::fallback, server::AppState},
     auth_route::get_auth_router,
     axum::{routing::get, Router},
-    qna::get_question_router,
-    quiz::quiz_router,
-    set::get_set_router,
+    qna_route::get_question_router,
+    quiz_route::quiz_router,
+    set_route::get_set_router,
     user_route::get_user_router,
 };
 
 pub mod auth_route;
-mod qna;
-mod quiz;
-mod set;
+mod qna_route;
+pub mod quiz_question_route;
+mod quiz_route;
+mod set_route;
 mod user_route;
 
 async fn root() -> &'static str {

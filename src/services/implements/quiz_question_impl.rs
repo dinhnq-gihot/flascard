@@ -1,16 +1,16 @@
 use {
     crate::{
-        entities::quiz_questions,
+        entities::sea_orm_active_enums::QuestionTypeEnum,
         enums::error::*,
         models::{
-            quiz::UpdateQuizRequest,
+            quiz::{QuestionCounts, UpdateQuizRequest},
             quiz_question::{
                 CreateQuizQuestionRequest, QuizQuestionResponse, UpdateQuizQuestionRequest,
             },
         },
         repositories::quiz_question::QuizQuestionRepository,
         services::traits::{quiz_question_trait::QuizQuestionService, quiz_trait::QuizService},
-        utils::validator::{all_quiz_answers_contain_id, validate_answer},
+        utils::validator::validate_answer,
     },
     async_trait::async_trait,
     std::sync::Arc,
@@ -36,17 +36,13 @@ impl QuizQuestionServiceImpl {
 
 #[async_trait]
 impl QuizQuestionService for QuizQuestionServiceImpl {
-    async fn create_one(
+    async fn create(
         &self,
         caller_id: Uuid,
         quiz_id: Uuid,
-        payload: CreateQuizQuestionRequest,
-    ) -> Result<QuizQuestionResponse> {
-        if !validate_answer(&payload.r#type, &payload.answers) {
-            return Err(Error::InvalidAnswer);
-        }
+        payloads: Vec<CreateQuizQuestionRequest>,
+    ) -> Result<Vec<QuizQuestionResponse>> {
         let quiz = self.quiz_service.get_by_id(caller_id, quiz_id).await?;
-
         if quiz.creator_id != caller_id {
             return Err(Error::PermissionDenied);
         }
@@ -54,97 +50,112 @@ impl QuizQuestionService for QuizQuestionServiceImpl {
             return Err(Error::PermissionDenied);
         }
 
-        let new_question = self
-            .quiz_question_repository
-            .create_one(quiz.id, quiz.last_question, payload.clone())
-            .await?;
-        if let Some(last_question_id) = quiz.last_question {
-            self.quiz_question_repository
-                .update_one(
-                    last_question_id,
-                    quiz.id,
-                    UpdateQuizQuestionRequest {
-                        question_content: None,
-                        answers: None,
-                        previous_question_id: None,
-                        next_question_id: Some(new_question.id),
-                    },
-                )
-                .await?;
+        for payload in payloads.iter() {
+            if !validate_answer(&payload.r#type, &payload.answers) {
+                return Err(Error::InvalidAnswer);
+            }
         }
-        let new_answers = self
+
+        let res = self
             .quiz_question_repository
-            .create_answers(new_question.id, payload.answers)
-            .await?;
+            .create_many(quiz_id, payloads)
+            .await?
+            .into_iter()
+            .map(|v| {
+                QuizQuestionResponse {
+                    question: v.0,
+                    answers: v.1,
+                }
+            })
+            .collect::<Vec<_>>();
+
+        let mut question_counts = QuestionCounts::default();
+        let mut total_point = 0;
+
+        let all_quiz_questions = self.quiz_question_repository.get_all(quiz_id).await?;
+        for (quiz_question, _) in all_quiz_questions {
+            match quiz_question.r#type {
+                QuestionTypeEnum::MultipleChoice => question_counts.multiple_choices += 1,
+                QuestionTypeEnum::CheckBoxes => question_counts.check_boxes += 1,
+                QuestionTypeEnum::TextFill => question_counts.text_fill += 1,
+            }
+            total_point += quiz_question.point;
+        }
 
         self.quiz_service
-            .update_one(
+            .update(
                 caller_id,
-                quiz.id,
+                quiz_id,
                 UpdateQuizRequest {
+                    name: None,
                     is_public: None,
-                    publish: None,
-                    last_question_id: Some(new_question.id),
+                    is_publish: None,
+                    question_counts: Some(question_counts),
+                    total_point: Some(total_point),
                 },
             )
             .await?;
-        Ok(QuizQuestionResponse {
-            question: new_question,
-            answers: new_answers,
-        })
+
+        Ok(res)
     }
 
-    async fn update_one(
+    async fn update(
         &self,
         caller_id: Uuid,
         quiz_id: Uuid,
-        quiz_question_id: Uuid,
-        payload: UpdateQuizQuestionRequest,
-    ) -> Result<Option<QuizQuestionResponse>> {
-        let quiz = self.quiz_service.get_by_id(caller_id, quiz_id).await?;
-        let (quiz_question, _) = self
-            .quiz_question_repository
-            .get_by_id(quiz_question_id, quiz_id)
-            .await?;
+        payloads: Vec<UpdateQuizQuestionRequest>,
+    ) -> Result<Vec<QuizQuestionResponse>> {
+        // Need to validate answers
 
+        let quiz = self.quiz_service.get_by_id(caller_id, quiz_id).await?;
         if quiz.creator_id != caller_id {
             return Err(Error::PermissionDenied);
         }
         if quiz.is_published {
             return Err(Error::PermissionDenied);
         }
-        if let Some(answers) = &payload.answers {
-            // Kiểm tra xem answer đc chỉnh có phù hợp không
-            // và tất cả các answer phải chưa id để update trong db
-            if !validate_answer(&quiz_question.r#type, answers)
-                || !all_quiz_answers_contain_id(answers)
-            {
-                return Err(Error::InvalidAnswer);
-            }
-            let answer_ids = answers.iter().map(|a| a.id.unwrap()).collect::<Vec<Uuid>>();
 
-            // Kiểm tra các answer có cùng 1 question không
-            if !self
-                .quiz_question_repository
-                .is_of_question(quiz_question_id, answer_ids)
-                .await?
-            {
-                return Err(Error::InvalidAnswer);
-            }
-        }
-
-        if let Some((updated_question, updated_answers)) = self
+        let res = self
             .quiz_question_repository
-            .update_one(quiz_question_id, quiz_id, payload)
+            .update_many(payloads)
             .await?
-        {
-            Ok(Some(QuizQuestionResponse {
-                question: updated_question,
-                answers: updated_answers,
-            }))
-        } else {
-            Ok(None)
+            .into_iter()
+            .map(|v| {
+                QuizQuestionResponse {
+                    question: v.0,
+                    answers: v.1,
+                }
+            })
+            .collect::<Vec<_>>();
+
+        let mut question_counts = QuestionCounts::default();
+        let mut total_point = 0;
+
+        let all_quiz_questions = self.quiz_question_repository.get_all(quiz_id).await?;
+        for (quiz_question, _) in all_quiz_questions {
+            match quiz_question.r#type {
+                QuestionTypeEnum::MultipleChoice => question_counts.multiple_choices += 1,
+                QuestionTypeEnum::CheckBoxes => question_counts.check_boxes += 1,
+                QuestionTypeEnum::TextFill => question_counts.text_fill += 1,
+            }
+            total_point += quiz_question.point;
         }
+
+        self.quiz_service
+            .update(
+                caller_id,
+                quiz_id,
+                UpdateQuizRequest {
+                    name: None,
+                    is_public: None,
+                    is_publish: None,
+                    question_counts: Some(question_counts),
+                    total_point: Some(total_point),
+                },
+            )
+            .await?;
+
+        Ok(res)
     }
 
     async fn delete(&self, caller_id: Uuid, quiz_id: Uuid, quiz_question_id: Uuid) -> Result<()> {
@@ -177,13 +188,24 @@ impl QuizQuestionService for QuizQuestionServiceImpl {
         Ok(QuizQuestionResponse { question, answers })
     }
 
-    async fn get_all(&self, caller_id: Uuid, quiz_id: Uuid) -> Result<Vec<quiz_questions::Model>> {
+    async fn get_all(&self, caller_id: Uuid, quiz_id: Uuid) -> Result<Vec<QuizQuestionResponse>> {
         if !self.quiz_service.is_created_by(quiz_id, caller_id).await?
             || !self.quiz_service.is_shared_with(quiz_id, caller_id).await?
         {
             return Err(Error::PermissionDenied);
         }
 
-        self.quiz_question_repository.get_all(quiz_id).await
+        Ok(self
+            .quiz_question_repository
+            .get_all(quiz_id)
+            .await?
+            .into_iter()
+            .map(|q| {
+                QuizQuestionResponse {
+                    question: q.0,
+                    answers: q.1,
+                }
+            })
+            .collect::<Vec<_>>())
     }
 }

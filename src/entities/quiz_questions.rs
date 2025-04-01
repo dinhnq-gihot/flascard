@@ -12,14 +12,14 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
     pub quiz_id: Uuid,
-    pub question_id: Option<Uuid>,
+    pub sample_id: Option<Uuid>,
     #[sea_orm(column_type = "Text")]
     pub question_content: String,
     pub r#type: QuestionTypeEnum,
     pub index: i32,
     pub point: i32,
-    #[sea_orm(column_type = "Text")]
-    pub explanation: String,
+    #[sea_orm(column_type = "Text", nullable)]
+    pub explanation: Option<String>,
     pub created_at: DateTime,
     pub updated_at: DateTime,
     pub is_deleted: bool,
@@ -29,7 +29,7 @@ pub struct Model {
 pub enum Relation {
     #[sea_orm(
         belongs_to = "super::questions::Entity",
-        from = "Column::QuestionId",
+        from = "Column::SampleId",
         to = "super::questions::Column::Id",
         on_update = "NoAction",
         on_delete = "SetNull"

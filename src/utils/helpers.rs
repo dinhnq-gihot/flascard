@@ -15,6 +15,6 @@ pub fn check_test_status(
     }
 }
 
-pub fn total_question_count(counts: QuestionCounts) -> u64 {
+pub fn total_question_count(counts: QuestionCounts) -> i32 {
     counts.check_boxes + counts.check_boxes + counts.text_fill
 }

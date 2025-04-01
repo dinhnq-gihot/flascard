@@ -1,4 +1,5 @@
 use {
+    super::quiz_question_route::quiz_question_router,
     crate::{
         controllers::quiz_controller::QuizController, middleware::jwt::check_jwt, server::AppState,
     },
@@ -45,6 +46,9 @@ pub fn quiz_router(state: &AppState) -> Router {
     //     .layer(middleware::from_fn(check_jwt))
     //     .with_state(state.clone());
 
-    Router::new().merge(quiz_router).merge(share_quiz_router)
+    Router::new()
+        .merge(quiz_router)
+        .merge(share_quiz_router)
+        .merge(quiz_question_router(state))
     // .merge(quiz_question_router)
 }

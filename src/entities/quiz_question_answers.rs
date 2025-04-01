@@ -12,7 +12,7 @@ pub struct Model {
     pub id: Uuid,
     pub quiz_question_id: Uuid,
     #[sea_orm(column_type = "Text")]
-    pub answer_content: String,
+    pub content: String,
     pub is_answer: bool,
     pub created_at: DateTime,
     pub updated_at: DateTime,

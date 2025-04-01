@@ -21,7 +21,7 @@ pub struct AppState {
     pub set_service: Arc<dyn SetService>,
     pub qna_service: Arc<dyn QnAService>,
     pub quiz_service: Arc<dyn QuizService>,
-    // pub quiz_question_service: Arc<dyn QuizQuestionService>,
+    pub quiz_question_service: Arc<dyn QuizQuestionService>,
     // pub test_service: Arc<dyn TestService>,
 }
 
@@ -37,7 +37,7 @@ impl AppState {
             set_service,
             qna_service,
             quiz_service,
-            // quiz_question_service,
+            quiz_question_service,
             // test_service,
         } = init_service_implements(db).await;
 
@@ -46,7 +46,7 @@ impl AppState {
             set_service,
             qna_service,
             quiz_service,
-            // quiz_question_service,
+            quiz_question_service,
             // test_service,
         })
     }

@@ -1,15 +1,9 @@
 use {
     crate::{
         enums::{error::*, generic::into_ok_response},
-        models::{
-            quiz::UpdateQuizRequest,
-            quiz_question::{CreateQuizQuestionRequest, UpdateQuizQuestionRequest},
-        },
+        models::quiz_question::{CreateQuizQuestionRequest, UpdateQuizQuestionRequest},
         server::AppState,
-        utils::{
-            jwt::Claims,
-            validator::{all_quiz_answers_contain_id, validate_answer},
-        },
+        utils::jwt::Claims,
     },
     axum::{
         extract::{Path, State},
@@ -20,17 +14,17 @@ use {
     uuid::Uuid,
 };
 
-pub struct QuizQuestionHandler;
+pub struct QuizQuestionController;
 
-impl QuizQuestionHandler {
+impl QuizQuestionController {
     pub async fn create(
         State(state): State<AppState>,
         Extension(caller): Extension<Claims>,
         Path(quiz_id): Path<Uuid>,
-        Json(payload): Json<CreateQuizQuestionRequest>,
+        Json(payloads): Json<Vec<CreateQuizQuestionRequest>>,
     ) -> Result<impl IntoResponse> {
         let service = Arc::clone(&state.quiz_question_service);
-        let res = service.create_one(caller.id, quiz_id, payload).await?;
+        let res = service.create(caller.id, quiz_id, payloads).await?;
 
         Ok(into_ok_response("Created successfully".into(), Some(res)))
     }
@@ -39,15 +33,12 @@ impl QuizQuestionHandler {
         State(state): State<AppState>,
         Extension(caller): Extension<Claims>,
         Path(quiz_id): Path<Uuid>,
-        Path(quiz_question_id): Path<Uuid>,
-        Json(payload): Json<UpdateQuizQuestionRequest>,
+        Json(payloads): Json<Vec<UpdateQuizQuestionRequest>>,
     ) -> Result<impl IntoResponse> {
         let service = Arc::clone(&state.quiz_question_service);
-        let res = service
-            .update_one(caller.id, quiz_id, quiz_question_id, payload)
-            .await?;
+        let res = service.update(caller.id, quiz_id, payloads).await?;
 
-        Ok(into_ok_response("Updated successfully".into(), res))
+        Ok(into_ok_response("Updated successfully".into(), Some(res)))
     }
 
     pub async fn delete(
@@ -69,26 +60,20 @@ impl QuizQuestionHandler {
         Path(quiz_question_id): Path<Uuid>,
     ) -> Result<impl IntoResponse> {
         let service = Arc::clone(&state.quiz_question_service);
-        let res = service.get_by_id(caller.id,  quiz_question_id, quiz_id).await?;
+        let res = service
+            .get_by_id(caller.id, quiz_question_id, quiz_id)
+            .await?;
 
         Ok(into_ok_response("success".into(), Some(res)))
     }
 
     pub async fn get_all(
         State(state): State<AppState>,
-        // Extension(caller): Extension<Claims>,
+        Extension(caller): Extension<Claims>,
         Path(quiz_id): Path<Uuid>,
     ) -> Result<impl IntoResponse> {
         let service = Arc::clone(&state.quiz_question_service);
-        let quiz_service = Arc::clone(&state.quiz_service);
-        let share_quiz_service = Arc::clone(&state.shared_quiz_service);
-
-        if !(quiz_service.is_created_by(quiz_id, caller.id).await?
-            || share_quiz_service.is_shared(quiz_id, caller.id).await?)
-        {
-            return Err(Error::PermissionDenied);
-        }
-        let res = service.get_all(quiz_id).await?;
+        let res = service.get_all(caller.id, quiz_id).await?;
 
         Ok(into_ok_response("success".into(), Some(res)))
     }
