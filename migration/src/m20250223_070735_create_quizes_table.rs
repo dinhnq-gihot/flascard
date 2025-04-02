@@ -21,6 +21,7 @@ impl MigrationTrait for Migration {
                     .col(json(Quizes::QuestionCounts))
                     .col(boolean(Quizes::IsPublished).default(false))
                     .col(unsigned(Quizes::TotalPoint).default(0))
+                    .col(unsigned(Quizes::Duration).default(0))
                     .col(timestamp(Quizes::CreatedAt).default(Expr::current_timestamp()))
                     .col(timestamp(Quizes::UpdatedAt).default(Expr::current_timestamp()))
                     .col(timestamp_null(Quizes::PublishAt))
@@ -54,6 +55,7 @@ pub enum Quizes {
     QuestionCounts,
     IsPublished,
     TotalPoint,
+    Duration,
     CreatedAt,
     UpdatedAt,
     PublishAt,

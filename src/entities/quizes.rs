@@ -16,6 +16,7 @@ pub struct Model {
     pub question_counts: Json,
     pub is_published: bool,
     pub total_point: i32,
+    pub duration: i32,
     pub created_at: DateTime,
     pub updated_at: DateTime,
     pub publish_at: Option<DateTime>,

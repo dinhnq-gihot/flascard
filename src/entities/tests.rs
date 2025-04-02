@@ -17,7 +17,7 @@ pub struct Model {
     pub started_at: Option<DateTime>,
     pub submitted_at: Option<DateTime>,
     pub duration: i32,
-    pub current_quiz_question: Uuid,
+    pub current_quiz_question_id: Uuid,
     pub remaining_time: i32,
     pub completed_questions: i32,
     pub total_question: i32,
@@ -27,6 +27,14 @@ pub struct Model {
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
+    #[sea_orm(
+        belongs_to = "super::quiz_questions::Entity",
+        from = "Column::CurrentQuizQuestionId",
+        to = "super::quiz_questions::Column::Id",
+        on_update = "NoAction",
+        on_delete = "SetNull"
+    )]
+    QuizQuestions,
     #[sea_orm(
         belongs_to = "super::quizes::Entity",
         from = "Column::QuizId",
@@ -45,6 +53,12 @@ pub enum Relation {
         on_delete = "Restrict"
     )]
     Users,
+}
+
+impl Related<super::quiz_questions::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::QuizQuestions.def()
+    }
 }
 
 impl Related<super::quizes::Entity> for Entity {

@@ -1,6 +1,7 @@
 use {
     crate::{
         m20250223_061404_create_users_table::Users, m20250223_070735_create_quizes_table::Quizes,
+        m20250223_071935_create_quiz_questions_table::QuizQuestions,
     },
     sea_orm_migration::{
         prelude::{extension::postgres::Type, *},
@@ -36,9 +37,9 @@ impl MigrationTrait for Migration {
                     .col(timestamp_null(Tests::StartedAt))
                     .col(timestamp_null(Tests::SubmittedAt))
                     .col(unsigned(Tests::Duration)) // Duration in seconds
-                    .col(uuid(Tests::CurrentQuizQuestion))
+                    .col(uuid(Tests::CurrentQuizQuestionId))
                     .col(unsigned(Tests::RemainingTime))
-                    .col(unsigned(Tests::CompletedQuestions))
+                    .col(unsigned(Tests::CompletedQuestions).default(0))
                     .col(unsigned(Tests::TotalQuestion))
                     .col(enumeration(Tests::Status, StatusEnum, Status::iter()).default("NotStart"))
                     .col(timestamp(Tests::CreatedAt).default(Expr::current_timestamp()))
@@ -55,6 +56,13 @@ impl MigrationTrait for Migration {
                             .from(Tests::Table, Tests::UserId)
                             .to(Users::Table, Users::Id)
                             .on_delete(ForeignKeyAction::Restrict),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk_tests_current_quiz_question_id")
+                            .from(Tests::Table, Tests::CurrentQuizQuestionId)
+                            .to(QuizQuestions::Table, QuizQuestions::Id)
+                            .on_delete(ForeignKeyAction::SetNull),
                     )
                     .to_owned(),
             )
@@ -97,7 +105,7 @@ pub enum Tests {
     StartedAt,
     SubmittedAt,
     Duration,
-    CurrentQuizQuestion,
+    CurrentQuizQuestionId,
     RemainingTime,
     CompletedQuestions,
     TotalQuestion,

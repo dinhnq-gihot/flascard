@@ -38,7 +38,11 @@ impl QuizRepository {
         creator_id: Uuid,
     ) -> Result<quizes::Model> {
         let conn = self.db.get_connection().await;
-        let CreateQuizRequest { name, is_public } = payload;
+        let CreateQuizRequest {
+            name,
+            is_public,
+            duration,
+        } = payload;
 
         let question_counts =
             serde_json::to_value(QuestionCounts::default()).map_err(|e| Error::Anyhow(e.into()))?;
@@ -48,6 +52,7 @@ impl QuizRepository {
             creator_id: Set(creator_id),
             is_public: Set(is_public),
             question_counts: Set(question_counts),
+            duration: Set(duration),
             ..Default::default()
         }
         .insert(&conn)
@@ -91,6 +96,10 @@ impl QuizRepository {
         }
         if let Some(total_point) = payload.total_point {
             active_model.total_point = Set(total_point);
+            updated = true;
+        }
+        if let Some(duration) = payload.duration {
+            active_model.duration = Set(duration);
             updated = true;
         }
 

@@ -54,7 +54,6 @@ pub struct QueryTestParams {
     pub sort_by: Option<String>,
     pub sort_order: Option<String>,
     pub page: Option<u64>,
-    pub page_size: Option<u64>,
 }
 
 pub struct UpdateTestParams {
@@ -102,10 +101,10 @@ impl From<quiz_question_answers::Model> for TestingAnswer {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct ResolveTestingQuestion {
+pub struct UpdateTestingResultResquest {
     pub selected_answer_ids: Option<Vec<Uuid>>,
     pub text_answer: Option<String>,
-    pub remainning_time: i32,
+    pub spent_time_in_second: Option<i32>,
 }
 
 #[derive(Debug, Serialize)]

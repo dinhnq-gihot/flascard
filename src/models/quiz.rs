@@ -15,15 +15,17 @@ pub struct QuestionCounts {
 pub struct CreateQuizRequest {
     pub name: Option<String>,
     pub is_public: bool,
+    pub duration: i32,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 pub struct UpdateQuizRequest {
     pub name: Option<String>,
     pub is_public: Option<bool>,
     pub is_publish: Option<bool>,
     pub question_counts: Option<QuestionCounts>,
     pub total_point: Option<i32>,
+    pub duration: Option<i32>,
 }
 
 // #[derive(Debug, Deserialize)]

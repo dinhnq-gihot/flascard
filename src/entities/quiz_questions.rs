@@ -47,6 +47,8 @@ pub enum Relation {
     Quizes,
     #[sea_orm(has_many = "super::test_results::Entity")]
     TestResults,
+    #[sea_orm(has_many = "super::tests::Entity")]
+    Tests,
 }
 
 impl Related<super::questions::Entity> for Entity {
@@ -70,6 +72,12 @@ impl Related<super::quizes::Entity> for Entity {
 impl Related<super::test_results::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::TestResults.def()
+    }
+}
+
+impl Related<super::tests::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Tests.def()
     }
 }
 

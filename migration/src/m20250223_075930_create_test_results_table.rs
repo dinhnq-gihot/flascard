@@ -19,6 +19,7 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(pk_uuid(TestResults::Id).default(Expr::cust("uuid_generate_v4()")))
                     .col(uuid(TestResults::TestId))
+                    .col(unsigned(TestResults::Index))
                     .col(uuid(TestResults::QuizQuestionId))
                     .col(text_null(TestResults::TextAnswer)) // Changed to text type
                     .col(
@@ -28,7 +29,7 @@ impl MigrationTrait for Migration {
                     )
                     .col(boolean(TestResults::IsResolved))
                     .col(boolean_null(TestResults::IsCorrect))
-                    .col(unsigned(TestResults::SpentTime))
+                    .col(unsigned(TestResults::SpentTime).default(0))
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk_test_results_test_id")
@@ -60,6 +61,7 @@ enum TestResults {
     Table,
     Id,
     TestId,
+    Index,
     QuizQuestionId,
     TextAnswer,
     SelectedAnswerIds,

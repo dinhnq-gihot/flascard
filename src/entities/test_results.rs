@@ -11,6 +11,7 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
     pub test_id: Uuid,
+    pub index: i32,
     pub quiz_question_id: Uuid,
     #[sea_orm(column_type = "Text", nullable)]
     pub text_answer: Option<String>,

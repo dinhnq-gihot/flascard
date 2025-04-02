@@ -87,11 +87,9 @@ impl QuizQuestionService for QuizQuestionServiceImpl {
                 caller_id,
                 quiz_id,
                 UpdateQuizRequest {
-                    name: None,
-                    is_public: None,
-                    is_publish: None,
                     question_counts: Some(question_counts),
                     total_point: Some(total_point),
+                    ..Default::default()
                 },
             )
             .await?;
@@ -146,11 +144,9 @@ impl QuizQuestionService for QuizQuestionServiceImpl {
                 caller_id,
                 quiz_id,
                 UpdateQuizRequest {
-                    name: None,
-                    is_public: None,
-                    is_publish: None,
                     question_counts: Some(question_counts),
                     total_point: Some(total_point),
+                    ..Default::default()
                 },
             )
             .await?;
