@@ -4,5 +4,6 @@ pub use super::{
     questions::Entity as Questions, quiz_question_answers::Entity as QuizQuestionAnswers,
     quiz_questions::Entity as QuizQuestions, quizes::Entity as Quizes, sets::Entity as Sets,
     shared_quizes::Entity as SharedQuizes, shared_sets::Entity as SharedSets,
-    test_results::Entity as TestResults, tests::Entity as Tests, users::Entity as Users,
+    test_answers::Entity as TestAnswers, test_question_results::Entity as TestQuestionResults,
+    tests::Entity as Tests, users::Entity as Users,
 };

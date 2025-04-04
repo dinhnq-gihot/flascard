@@ -6,28 +6,18 @@ use {
 };
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Deserialize)]
-#[sea_orm(table_name = "test_results")]
+#[sea_orm(table_name = "test_question_results")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
     pub test_id: Uuid,
     pub quiz_question_id: Uuid,
-    #[sea_orm(column_type = "Text", nullable)]
-    pub text_answer: Option<String>,
-    pub selected_answer_id: Option<Uuid>,
-    pub spent_time: i32,
+    pub index: Uuid,
+    pub is_correct: Option<bool>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
-    #[sea_orm(
-        belongs_to = "super::quiz_question_answers::Entity",
-        from = "Column::SelectedAnswerId",
-        to = "super::quiz_question_answers::Column::Id",
-        on_update = "NoAction",
-        on_delete = "SetNull"
-    )]
-    QuizQuestionAnswers,
     #[sea_orm(
         belongs_to = "super::quiz_questions::Entity",
         from = "Column::QuizQuestionId",
@@ -44,12 +34,6 @@ pub enum Relation {
         on_delete = "Restrict"
     )]
     Tests,
-}
-
-impl Related<super::quiz_question_answers::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::QuizQuestionAnswers.def()
-    }
 }
 
 impl Related<super::quiz_questions::Entity> for Entity {

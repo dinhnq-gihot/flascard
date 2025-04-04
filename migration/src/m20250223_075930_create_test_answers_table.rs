@@ -1,6 +1,7 @@
 use {
     crate::{
         m20250223_071935_create_quiz_questions_table::QuizQuestions,
+        m20250223_072007_create_quiz_question_anwsers_table::QuizQuestionAnswers,
         m20250223_075910_create_tests_table::Tests,
     },
     sea_orm_migration::{prelude::*, schema::*},
@@ -15,34 +16,34 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(TestResults::Table)
+                    .table(TestAnswers::Table)
                     .if_not_exists()
-                    .col(pk_uuid(TestResults::Id).default(Expr::cust("uuid_generate_v4()")))
-                    .col(uuid(TestResults::TestId))
-                    .col(unsigned(TestResults::Index))
-                    .col(uuid(TestResults::QuizQuestionId))
-                    .col(text_null(TestResults::TextAnswer)) // Changed to text type
-                    .col(
-                        ColumnDef::new(TestResults::SelectedAnswerIds)
-                            .array(ColumnType::Uuid)
-                            .null(),
-                    )
-                    .col(boolean(TestResults::IsResolved))
-                    .col(boolean_null(TestResults::IsCorrect))
-                    .col(unsigned(TestResults::SpentTime).default(0))
+                    .col(pk_uuid(TestAnswers::Id).default(Expr::cust("uuid_generate_v4()")))
+                    .col(uuid(TestAnswers::TestId))
+                    .col(uuid(TestAnswers::QuizQuestionId))
+                    .col(text_null(TestAnswers::TextAnswer)) // Changed to text type
+                    .col(uuid_null(TestAnswers::SelectedAnswerId))
+                    .col(unsigned(TestAnswers::SpentTime).default(0))
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk_test_results_test_id")
-                            .from(TestResults::Table, TestResults::TestId)
+                            .from(TestAnswers::Table, TestAnswers::TestId)
                             .to(Tests::Table, Tests::Id)
                             .on_delete(ForeignKeyAction::Restrict),
                     )
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk_test_results_quiz_question_id")
-                            .from(TestResults::Table, TestResults::QuizQuestionId)
+                            .from(TestAnswers::Table, TestAnswers::QuizQuestionId)
                             .to(QuizQuestions::Table, QuizQuestions::Id)
                             .on_delete(ForeignKeyAction::Restrict),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk_test_results_quiz_question_answer_id")
+                            .from(TestAnswers::Table, TestAnswers::SelectedAnswerId)
+                            .to(QuizQuestionAnswers::Table, QuizQuestionAnswers::Id)
+                            .on_delete(ForeignKeyAction::SetNull),
                     )
                     .to_owned(),
             )
@@ -51,21 +52,18 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_table(Table::drop().table(TestResults::Table).to_owned())
+            .drop_table(Table::drop().table(TestAnswers::Table).to_owned())
             .await
     }
 }
 
 #[derive(DeriveIden)]
-enum TestResults {
+enum TestAnswers {
     Table,
     Id,
     TestId,
-    Index,
     QuizQuestionId,
     TextAnswer,
-    SelectedAnswerIds,
-    IsResolved,
-    IsCorrect,
+    SelectedAnswerId,
     SpentTime,
 }

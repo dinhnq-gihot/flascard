@@ -184,6 +184,26 @@ impl QuizQuestionService for QuizQuestionServiceImpl {
         Ok(QuizQuestionResponse { question, answers })
     }
 
+    async fn get_by_index(
+        &self,
+        caller_id: Uuid,
+        quiz_id: Uuid,
+        quiz_question_index: i32,
+    ) -> Result<QuizQuestionResponse> {
+        if !self.quiz_service.is_created_by(quiz_id, caller_id).await?
+            || !self.quiz_service.is_shared_with(quiz_id, caller_id).await?
+        {
+            return Err(Error::PermissionDenied);
+        }
+
+        let (question, answers) = self
+            .quiz_question_repository
+            .get_by_index(quiz_question_index, quiz_id)
+            .await?;
+
+        Ok(QuizQuestionResponse { question, answers })
+    }
+
     async fn get_all(&self, caller_id: Uuid, quiz_id: Uuid) -> Result<Vec<QuizQuestionResponse>> {
         if !self.quiz_service.is_created_by(quiz_id, caller_id).await?
             || !self.quiz_service.is_shared_with(quiz_id, caller_id).await?

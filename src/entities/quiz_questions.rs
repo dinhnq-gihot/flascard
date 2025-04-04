@@ -45,8 +45,10 @@ pub enum Relation {
         on_delete = "Restrict"
     )]
     Quizes,
-    #[sea_orm(has_many = "super::test_results::Entity")]
-    TestResults,
+    #[sea_orm(has_many = "super::test_answers::Entity")]
+    TestAnswers,
+    #[sea_orm(has_many = "super::test_question_results::Entity")]
+    TestQuestionResults,
     #[sea_orm(has_many = "super::tests::Entity")]
     Tests,
 }
@@ -69,9 +71,15 @@ impl Related<super::quizes::Entity> for Entity {
     }
 }
 
-impl Related<super::test_results::Entity> for Entity {
+impl Related<super::test_answers::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::TestResults.def()
+        Relation::TestAnswers.def()
+    }
+}
+
+impl Related<super::test_question_results::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::TestQuestionResults.def()
     }
 }
 

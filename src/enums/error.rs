@@ -16,7 +16,7 @@ pub enum Error {
     DatabaseMigrationFailed,
     #[error("Begin transaction failed: {0}")]
     BeginTransactionFailed(#[source] DbErr),
-    #[error("Begin transaction failed: {0}")]
+    #[error("Commit transaction failed: {0}")]
     CommitTransactionFailed(#[source] DbErr),
     #[error("Insert failed: {0}")]
     InsertFailed(#[source] DbErr),
@@ -36,6 +36,8 @@ pub enum Error {
     PermissionDenied,
     #[error("Database Error: {0}")]
     DbError(#[source] DbErr),
+    #[error("Into Model Error: {0}")]
+    IntoModelError(#[source] DbErr),
 
     // File errors
     #[error("Create file failed")]
@@ -78,6 +80,10 @@ pub enum Error {
     // Environment variable errors
     #[error("Environment variable {0} not found")]
     EnvVarNotFound(String),
+
+    // Test errors
+    #[error("Test ended")]
+    TestEnded,
 }
 
 impl IntoResponse for Error {
@@ -85,10 +91,10 @@ impl IntoResponse for Error {
         let status = match &self {
             Error::RecordNotFound => StatusCode::NOT_FOUND,
             Error::UserAlreadyExists => StatusCode::CONFLICT,
-            Error::AccessDenied
-            | Error::PermissionDenied
-            | Error::Published
-            | Error::InvalidAnswer => StatusCode::FORBIDDEN,
+            Error::AccessDenied | Error::PermissionDenied => StatusCode::FORBIDDEN,
+            Error::TestEnded | Error::Published | Error::InvalidAnswer => {
+                StatusCode::NOT_ACCEPTABLE
+            }
             Error::InvalidCredentials => StatusCode::UNAUTHORIZED,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         };

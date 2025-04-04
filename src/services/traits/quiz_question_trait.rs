@@ -34,5 +34,12 @@ pub trait QuizQuestionService: Sync + Send {
         quiz_question_id: Uuid,
     ) -> Result<QuizQuestionResponse>;
 
+    async fn get_by_index(
+        &self,
+        caller_id: Uuid,
+        quiz_id: Uuid,
+        quiz_question_index: i32,
+    ) -> Result<QuizQuestionResponse>;
+
     async fn get_all(&self, caller_id: Uuid, quiz_id: Uuid) -> Result<Vec<QuizQuestionResponse>>;
 }

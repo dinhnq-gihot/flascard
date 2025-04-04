@@ -10,6 +10,7 @@ pub mod sea_orm_active_enums;
 pub mod sets;
 pub mod shared_quizes;
 pub mod shared_sets;
-pub mod test_results;
+pub mod test_answers;
+pub mod test_question_results;
 pub mod tests;
 pub mod users;

@@ -50,7 +50,7 @@ impl MigrationTrait for Migration {
 }
 
 #[derive(DeriveIden)]
-enum QuizQuestionAnswers {
+pub enum QuizQuestionAnswers {
     Table,
     Id,
     QuizQuestionId,

@@ -9,8 +9,8 @@ use {
         models::quiz_question::{CreateQuizQuestionRequest, UpdateQuizQuestionRequest},
     },
     sea_orm::{
-        ActiveModelTrait, ColumnTrait, Condition, EntityTrait, QueryFilter, Set, TransactionTrait,
-        TryIntoModel,
+        ActiveModelTrait, ColumnTrait, Condition, EntityTrait, QueryFilter, QueryOrder, Set,
+        TransactionTrait, TryIntoModel,
     },
     std::sync::Arc,
     uuid::Uuid,
@@ -322,6 +322,34 @@ impl QuizQuestionRepository {
         Ok((quiz_question, quiz_question_answers))
     }
 
+    pub async fn get_by_index(
+        &self,
+        quiz_question_index: i32,
+        quiz_id: Uuid,
+    ) -> Result<(quiz_questions::Model, Vec<quiz_question_answers::Model>)> {
+        let conn = self.db.get_connection().await;
+
+        let quiz_question = QuizQuestions::find()
+            .filter(
+                Condition::all()
+                    .add(quiz_questions::Column::Index.eq(quiz_question_index))
+                    .add(quiz_questions::Column::QuizId.eq(quiz_id))
+                    .add(quiz_questions::Column::IsDeleted.eq(false)),
+            )
+            .one(&conn)
+            .await
+            .map_err(Error::QueryFailed)?
+            .ok_or(Error::RecordNotFound)?;
+
+        let quiz_question_answers = QuizQuestionAnswers::find()
+            .filter(quiz_question_answers::Column::QuizQuestionId.eq(quiz_question.id))
+            .all(&conn)
+            .await
+            .map_err(Error::QueryFailed)?;
+
+        Ok((quiz_question, quiz_question_answers))
+    }
+
     pub async fn get_all(
         &self,
         quiz_id: Uuid,
@@ -334,6 +362,7 @@ impl QuizQuestionRepository {
                     .add(quiz_questions::Column::QuizId.eq(quiz_id))
                     .add(quiz_questions::Column::IsDeleted.eq(false)),
             )
+            .order_by_asc(quiz_questions::Column::Index)
             .find_with_related(QuizQuestionAnswers)
             .all(&conn)
             .await

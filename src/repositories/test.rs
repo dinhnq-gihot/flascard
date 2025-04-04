@@ -2,16 +2,16 @@ use {
     crate::{
         db::db_connection::Database,
         entities::{
-            prelude::{TestResults, Tests},
+            prelude::{TestAnswers, TestQuestionResults, Tests},
             sea_orm_active_enums::StatusEnum,
-            test_results, tests,
+            test_answers, test_question_results, tests,
         },
         enums::{error::*, generic::PaginatedResponse},
-        models::test::{QueryTestParams, UpdateTestParams, UpdateTestingResultResquest},
+        models::test::{QueryTestParams, SaveTestAnswer, UpdateTest},
     },
     sea_orm::{
-        ActiveModelTrait, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, Set,
-        TransactionTrait,
+        sea_query::OnConflict, ActiveModelTrait, ColumnTrait, Condition, EntityTrait,
+        PaginatorTrait, QueryFilter, QueryOrder, Set, TransactionTrait, TryIntoModel,
     },
     std::sync::Arc,
     uuid::Uuid,
@@ -112,7 +112,7 @@ impl TestRepository {
         &self,
         caller_id: Uuid,
         test_id: Uuid,
-        params: UpdateTestParams,
+        payload: UpdateTest,
     ) -> Result<Option<tests::Model>> {
         let conn = self.db.get_connection().await;
 
@@ -126,24 +126,28 @@ impl TestRepository {
 
         let mut updated = false;
 
-        if let Some(started_at) = params.started_at {
+        if let Some(started_at) = payload.started_at {
             existing_test.started_at = Set(Some(started_at));
             updated = true;
         }
-        if let Some(submitted_at) = params.submitted_at {
+        if let Some(submitted_at) = payload.submitted_at {
             existing_test.submitted_at = Set(Some(submitted_at));
             updated = true;
         }
-        if let Some(current_testing_quiz_question) = params.current_testing_quiz_question {
+        if let Some(current_testing_quiz_question) = payload.current_testing_quiz_question {
             existing_test.current_quiz_question_id = Set(current_testing_quiz_question);
             updated = true;
         }
-        if let Some(remaining_time) = params.remaining_time {
+        if let Some(remaining_time) = payload.remaining_time {
             existing_test.remaining_time = Set(remaining_time);
             updated = true;
         }
-        if let Some(resolved_count) = params.resolved_count {
+        if let Some(resolved_count) = payload.resolved_count {
             existing_test.completed_questions = Set(resolved_count);
+            updated = true;
+        }
+        if let Some(status) = payload.status {
+            existing_test.status = Set(status);
             updated = true;
         }
 
@@ -172,11 +176,12 @@ impl TestRepository {
         Ok(false)
     }
 
-    pub async fn create_all_test_question_results(
+    pub async fn save_test_answers(
         &self,
         test_id: Uuid,
-        quiz_question_ids: Vec<Uuid>,
-    ) -> Result<Vec<test_results::Model>> {
+        quiz_question_id: Uuid,
+        payloads: Vec<SaveTestAnswer>,
+    ) -> Result<Vec<test_answers::Model>> {
         let txn = self
             .db
             .get_connection()
@@ -185,33 +190,87 @@ impl TestRepository {
             .await
             .map_err(Error::BeginTransactionFailed)?;
 
-        let test_results = quiz_question_ids
+        let mut res = Vec::new();
+
+        for payload in payloads.into_iter() {
+            let json = serde_json::to_value(payload).map_err(|e| Error::Anyhow(e.into()))?;
+            let mut test_result =
+                test_answers::ActiveModel::from_json(json).map_err(|e| Error::Anyhow(e.into()))?;
+            test_result.test_id = Set(test_id);
+            test_result.quiz_question_id = Set(quiz_question_id);
+
+            let model = test_result
+                .save(&txn)
+                .await
+                .map_err(Error::InsertFailed)?
+                .try_into_model()
+                .map_err(Error::IntoModelError)?;
+
+            res.push(model);
+        }
+
+        txn.commit().await.map_err(|e| Error::Anyhow(e.into()))?;
+
+        Ok(res)
+    }
+
+    pub async fn get_test_answers(
+        &self,
+        test_id: Uuid,
+        quiz_question_id: Uuid,
+    ) -> Result<Vec<test_answers::Model>> {
+        let conn = self.db.get_connection().await;
+
+        TestAnswers::find()
+            .filter(
+                Condition::all()
+                    .add(test_answers::Column::TestId.eq(test_id))
+                    .add(test_answers::Column::QuizQuestionId.eq(quiz_question_id)),
+            )
+            .all(&conn)
+            .await
+            .map_err(Error::QueryFailed)
+    }
+
+    pub async fn create_test_question_results(
+        &self,
+        test_id: Uuid,
+        quiz_question_ids: Vec<Uuid>,
+    ) -> Result<Vec<test_question_results::Model>> {
+        let txn = self
+            .db
+            .get_connection()
+            .await
+            .begin()
+            .await
+            .map_err(Error::BeginTransactionFailed)?;
+
+        let result_ams = quiz_question_ids
             .into_iter()
-            .map(|id| {
-                test_results::ActiveModel {
+            .map(|quiz_question_id| {
+                test_question_results::ActiveModel {
                     test_id: Set(test_id),
-                    quiz_question_id: Set(id),
+                    quiz_question_id: Set(quiz_question_id),
                     ..Default::default()
                 }
             })
             .collect::<Vec<_>>();
 
-        let res = TestResults::insert_many(test_results)
+        let res = test_question_results::Entity::insert_many(result_ams)
             .exec_with_returning_many(&txn)
             .await
-            .map_err(Error::InsertFailed)?;
+            .map_err(Error::QueryFailed)?;
 
-        txn.commit().await.map_err(|e| Error::Anyhow(e.into()))?;
+        txn.commit().await.map_err(Error::CommitTransactionFailed)?;
 
         Ok(res)
     }
 
-    pub async fn update_test_result(
+    pub async fn update_test_question_results(
         &self,
         test_id: Uuid,
-        test_result_id: Uuid,
-        payload: UpdateTestingResultResquest,
-    ) -> Result<Option<test_results::Model>> {
+        results: Vec<(Uuid, bool)>,
+    ) -> Result<Vec<test_question_results::Model>> {
         let txn = self
             .db
             .get_connection()
@@ -220,41 +279,69 @@ impl TestRepository {
             .await
             .map_err(Error::BeginTransactionFailed)?;
 
-        let mut test_result: test_results::ActiveModel =
-            test_results::Entity::find_by_id(test_result_id)
-                .filter(test_results::Column::TestId.eq(test_id))
-                .one(&txn)
-                .await
-                .map_err(Error::QueryFailed)?
-                .ok_or(Error::RecordNotFound)?
-                .into();
-        let mut updated = false;
+        let result_ams = results
+            .into_iter()
+            .map(|(quiz_question_id, is_correct)| {
+                test_question_results::ActiveModel {
+                    test_id: Set(test_id),
+                    quiz_question_id: Set(quiz_question_id),
+                    is_correct: Set(Some(is_correct)),
+                    ..Default::default()
+                }
+            })
+            .collect::<Vec<_>>();
 
-        if let Some(selected_answers_ids) = payload.selected_answer_ids {
-            test_result.selected_answer_ids = Set(Some(selected_answers_ids));
-            updated = true;
-        }
-        if let Some(spent_time) = payload.spent_time_in_second {
-            test_result.spent_time = Set(spent_time);
-            updated = true;
-        }
-        if let Some(text_answer) = payload.text_answer {
-            test_result.text_answer = Set(Some(text_answer));
-            updated = true;
-        }
+        let on_conflict = OnConflict::columns([
+            test_question_results::Column::TestId,
+            test_question_results::Column::QuizQuestionId,
+        ])
+        .update_column(test_question_results::Column::IsCorrect)
+        .to_owned();
 
-        let res = if updated {
-            Some(
-                test_result
-                    .update(&txn)
-                    .await
-                    .map_err(Error::UpdateFailed)?,
-            )
-        } else {
-            None
-        };
+        let res = TestQuestionResults::insert_many(result_ams)
+            .on_conflict(on_conflict)
+            .exec_with_returning_many(&txn)
+            .await
+            .map_err(Error::InsertFailed)?;
 
-        txn.commit().await.map_err(|e| Error::Anyhow(e.into()))?;
+        txn.commit().await.map_err(Error::CommitTransactionFailed)?;
+
         Ok(res)
     }
+
+    pub async fn get_test_question_result(
+        &self,
+        test_id: Uuid,
+        quiz_question_id: Uuid,
+    ) -> Result<test_question_results::Model> {
+        let conn = self.db.get_connection().await;
+
+        TestQuestionResults::find()
+            .filter(
+                Condition::all().add(
+                    test_question_results::Column::TestId
+                        .eq(test_id)
+                        .add(test_question_results::Column::QuizQuestionId.eq(quiz_question_id)),
+                ),
+            )
+            .one(&conn)
+            .await
+            .map_err(Error::QueryFailed)?
+            .ok_or(Error::RecordNotFound)
+    }
+
+    pub async fn get_all_test_question_result(
+        &self,
+        test_id: Uuid,
+    ) -> Result<Vec<test_question_results::Model>> {
+        let conn = self.db.get_connection().await;
+
+        TestQuestionResults::find()
+            .filter(Condition::all().add(test_question_results::Column::TestId.eq(test_id)))
+            .all(&conn)
+            .await
+            .map_err(Error::QueryFailed)
+    }
+
+    
 }

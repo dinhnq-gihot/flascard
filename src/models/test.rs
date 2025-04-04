@@ -1,5 +1,10 @@
 use {
-    crate::entities::{quiz_question_answers, sea_orm_active_enums::QuestionTypeEnum},
+    super::quiz_question::QuizQuestionResponse,
+    crate::entities::{
+        quiz_question_answers,
+        sea_orm_active_enums::{QuestionTypeEnum, StatusEnum},
+        test_answers,
+    },
     chrono::NaiveDateTime,
     serde::{Deserialize, Serialize},
     uuid::Uuid,
@@ -8,7 +13,6 @@ use {
 #[derive(Debug, Deserialize)]
 pub struct CreateTest {
     pub quiz_id: Uuid,
-    pub max_duration: u64,
 }
 
 #[derive(Debug, Serialize)]
@@ -56,9 +60,11 @@ pub struct QueryTestParams {
     pub page: Option<u64>,
 }
 
-pub struct UpdateTestParams {
+#[derive(Debug, Default)]
+pub struct UpdateTest {
     pub started_at: Option<NaiveDateTime>,
     pub submitted_at: Option<NaiveDateTime>,
+    pub status: Option<StatusEnum>,
     pub current_testing_quiz_question: Option<Uuid>,
     pub resolved_count: Option<i32>,
     pub remaining_time: Option<i32>,
@@ -76,11 +82,7 @@ pub struct TestingQuestion {
     pub content: String,
     pub r#type: QuestionTypeEnum,
     pub answers: Vec<TestingAnswer>,
-    pub text_answer: Option<String>,
-    pub selected_answer_ids: Option<Vec<Uuid>>,
-    pub spent_time_in_second: i32,
-    pub next_question_id: Option<Uuid>,
-    pub previous_question_id: Option<Uuid>,
+    pub user_answers: Vec<test_answers::Model>,
 }
 
 #[derive(Debug, Serialize)]
@@ -100,11 +102,34 @@ impl From<quiz_question_answers::Model> for TestingAnswer {
     }
 }
 
-#[derive(Debug, Deserialize)]
-pub struct UpdateTestingResultResquest {
-    pub selected_answer_ids: Option<Vec<Uuid>>,
+impl From<QuizQuestionResponse> for TestingQuestion {
+    fn from(value: QuizQuestionResponse) -> Self {
+        let QuizQuestionResponse { question, answers } = value;
+
+        Self {
+            id: question.id,
+            content: question.question_content,
+            r#type: question.r#type,
+            answers: answers.into_iter().map(Into::into).collect(),
+            user_answers: vec![],
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct SaveTestAnswer {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<Uuid>,
+    pub selected_answer_id: Option<Uuid>,
     pub text_answer: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub spent_time_in_second: Option<i32>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ResolveTestRequest {
+    pub save_test_answers: Vec<SaveTestAnswer>,
+    pub remaining_time: i32,
 }
 
 #[derive(Debug, Serialize)]
