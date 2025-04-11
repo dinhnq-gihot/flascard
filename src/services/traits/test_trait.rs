@@ -1,10 +1,10 @@
 use {
     crate::{
-        entities::{test_answers, test_question_results, tests},
+        entities::{test_question_results, tests},
         enums::{error::*, generic::PaginatedResponse},
         models::test::{
-            CreateTest, CreateTestResponse, QueryTestParams, ResolveTestRequest, SaveTestAnswer,
-            TestResponse, TestingQuestion,
+            CreateTest, QueryTestParams, ResolveTestRequest, ResultResponse, SolutionResponse,
+            TestingQuestion,
         },
     },
     uuid::Uuid,
@@ -31,7 +31,7 @@ pub trait TestService: Sync + Send {
         params: QueryTestParams,
     ) -> Result<PaginatedResponse<tests::Model>>;
     async fn get_by_id(&self, caller_id: Uuid, test_id: Uuid) -> Result<tests::Model>;
-    async fn start_one(&self, caller_id: Uuid, test_id: Uuid) -> Result<tests::Model>;
+    async fn start_one(&self, caller_id: Uuid, test_id: Uuid) -> Result<TestingQuestion>;
 
     // Test Answers
     async fn get_testing_question(
@@ -56,11 +56,11 @@ pub trait TestService: Sync + Send {
         caller_id: Uuid,
         test_id: Uuid,
     ) -> Result<Vec<test_question_results::Model>>;
-    async fn result(&self, caller_id: Uuid, test_id: Uuid) -> Result<()>;
+    async fn result(&self, caller_id: Uuid, test_id: Uuid) -> Result<ResultResponse>;
     async fn review_solution(
         &self,
         caller_id: Uuid,
         test_id: Uuid,
         quiz_question_id: Uuid,
-    ) -> Result<()>;
+    ) -> Result<SolutionResponse>;
 }

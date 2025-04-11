@@ -8,8 +8,8 @@ pub mod qna_controller;
 pub mod quiz_controller;
 pub mod quiz_question_controller;
 pub mod set_controller;
+pub mod test_controller;
 pub mod user_controller;
-// pub mod test;
 
 pub async fn fallback(uri: Uri) -> impl IntoResponse {
     (StatusCode::NOT_FOUND, format!("No route: {uri}"))

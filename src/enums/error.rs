@@ -84,6 +84,8 @@ pub enum Error {
     // Test errors
     #[error("Test ended")]
     TestEnded,
+    #[error("Test not end")]
+    TestNotEnd,
 }
 
 impl IntoResponse for Error {

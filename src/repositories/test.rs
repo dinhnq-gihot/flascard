@@ -150,6 +150,10 @@ impl TestRepository {
             existing_test.status = Set(status);
             updated = true;
         }
+        if let Some(score) = payload.score {
+            existing_test.score = Set(Some(score));
+            updated = true;
+        }
 
         if updated {
             Ok(Some(
@@ -342,6 +346,4 @@ impl TestRepository {
             .await
             .map_err(Error::QueryFailed)
     }
-
-    
 }

@@ -3,7 +3,7 @@ use {
     crate::entities::{
         quiz_question_answers,
         sea_orm_active_enums::{QuestionTypeEnum, StatusEnum},
-        test_answers,
+        test_answers, test_question_results, tests,
     },
     chrono::NaiveDateTime,
     serde::{Deserialize, Serialize},
@@ -68,6 +68,7 @@ pub struct UpdateTest {
     pub current_testing_quiz_question: Option<Uuid>,
     pub resolved_count: Option<i32>,
     pub remaining_time: Option<i32>,
+    pub score: Option<i32>,
 }
 
 #[derive(Debug, Serialize)]
@@ -135,4 +136,19 @@ pub struct ResolveTestRequest {
 #[derive(Debug, Serialize)]
 pub struct ResolveResponse {
     pub next_question_id: Option<Uuid>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct SolutionResponse {
+    pub solution: QuizQuestionResponse,
+    pub text_answer: Option<String>,
+    pub selected_answer_ids: Vec<Uuid>,
+    pub is_correct: Option<bool>,
+    pub spent_time: i32,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ResultResponse {
+    pub test: tests::Model,
+    pub result: Vec<test_question_results::Model>,
 }

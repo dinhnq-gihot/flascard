@@ -3,16 +3,14 @@ use {
     crate::{
         db::db_connection::Database,
         repositories::{
-            question::QnARepository,
-            quiz::QuizRepository,
-            quiz_question::QuizQuestionRepository,
-            set::SetRepository,
-            user::UserRepository, //test::TestRepository, ,
+            question::QnARepository, quiz::QuizRepository, quiz_question::QuizQuestionRepository,
+            set::SetRepository, test::TestRepository, user::UserRepository,
         },
     },
     quiz_impl::QuizServiceImpl,
     quiz_question_impl::QuizQuestionServiceImpl,
     std::sync::Arc,
+    test_impl::TestServiceImpl,
 };
 
 pub mod prelude;
@@ -29,7 +27,7 @@ pub struct ServiceImpls {
     pub qna_service: Arc<dyn QnAService>,
     pub quiz_service: Arc<dyn QuizService>,
     pub quiz_question_service: Arc<dyn QuizQuestionService>,
-    // pub test_service: Arc<dyn TestService>,
+    pub test_service: Arc<dyn TestService>,
 }
 
 pub async fn init_service_implements(db: Arc<Database>) -> ServiceImpls {
@@ -50,12 +48,11 @@ pub async fn init_service_implements(db: Arc<Database>) -> ServiceImpls {
         Arc::new(QuizQuestionRepository::new(Arc::clone(&db))),
         quiz_service.clone(),
     ));
-    // let test_service = Arc::new(TestServiceImpl::new(
-    //     Arc::new(TestRepository::new(Arc::clone(&db))),
-    //     quiz_service.clone(),
-    //     quiz_question_service.clone(),
-    //     set_service.clone(),
-    // ));
+    let test_service = Arc::new(TestServiceImpl::new(
+        Arc::new(TestRepository::new(Arc::clone(&db))),
+        quiz_service.clone(),
+        quiz_question_service.clone(),
+    ));
 
     ServiceImpls {
         user_service,
@@ -63,6 +60,6 @@ pub async fn init_service_implements(db: Arc<Database>) -> ServiceImpls {
         qna_service,
         quiz_service,
         quiz_question_service,
-        // test_service,
+        test_service,
     }
 }

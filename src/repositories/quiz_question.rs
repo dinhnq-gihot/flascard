@@ -98,7 +98,7 @@ impl QuizQuestionRepository {
             .await
             .begin()
             .await
-            .map_err(|e| Error::BeginTransactionFailed(e))?;
+            .map_err(Error::BeginTransactionFailed)?;
 
         // Create all answers and associate them with questions
         let mut result = Vec::new();
@@ -142,9 +142,7 @@ impl QuizQuestionRepository {
             result.push((question, created_answers));
         }
 
-        txn.commit()
-            .await
-            .map_err(|e| Error::CommitTransactionFailed(e))?;
+        txn.commit().await.map_err(Error::CommitTransactionFailed)?;
 
         Ok(result)
     }

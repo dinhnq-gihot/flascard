@@ -3,25 +3,23 @@ use {
         debug,
         entities::{
             sea_orm_active_enums::{QuestionTypeEnum, StatusEnum},
-            test_answers, test_question_results, tests,
+            test_question_results, tests,
         },
         enums::{error::*, generic::PaginatedResponse},
         error,
         models::{
-            quiz::{self, QuestionCounts},
-            quiz_question::QuizQuestionResponse,
+            quiz::QuestionCounts,
             test::{
-                CreateTest, CreateTestResponse, CurrentTestState, QueryTestParams,
-                ResolveTestRequest, SaveTestAnswer, TestResponse, TestingAnswer, TestingQuestion,
-                TestingQuiz, UpdateTest,
+                CreateTest, QueryTestParams, ResolveTestRequest, ResultResponse, SolutionResponse,
+                TestingQuestion, UpdateTest,
             },
         },
         repositories::test::TestRepository,
         services::traits::{
             quiz_question_trait::QuizQuestionService, quiz_trait::QuizService,
-            set_trait::SetService, test_trait::TestService,
+            test_trait::TestService,
         },
-        utils::helpers::{check_test_status, total_question_count},
+        utils::helpers::total_question_count,
     },
     async_trait::async_trait,
     chrono::Utc,
@@ -33,7 +31,7 @@ pub struct TestServiceImpl {
     test_repository: Arc<TestRepository>,
     quiz_service: Arc<dyn QuizService>,
     quiz_question_service: Arc<dyn QuizQuestionService>,
-    set_service: Arc<dyn SetService>,
+    // set_service: Arc<dyn SetService>,
 }
 
 impl TestServiceImpl {
@@ -41,12 +39,12 @@ impl TestServiceImpl {
         test_repository: Arc<TestRepository>,
         quiz_service: Arc<dyn QuizService>,
         quiz_question_service: Arc<dyn QuizQuestionService>,
-        set_service: Arc<dyn SetService>,
+        // set_service: Arc<dyn SetService>,
     ) -> Self {
         Self {
             test_repository,
             quiz_service,
-            set_service,
+            // set_service,
             quiz_question_service,
         }
     }
@@ -97,9 +95,7 @@ impl TestService for TestServiceImpl {
         caller_id: Uuid,
         params: QueryTestParams,
     ) -> Result<PaginatedResponse<tests::Model>> {
-        self.test_repository
-            .get_all_tests(caller_id, params)
-            .await?;
+        self.test_repository.get_all_tests(caller_id, params).await
     }
 
     async fn get_by_id(&self, caller_id: Uuid, test_id: Uuid) -> Result<tests::Model> {
@@ -189,9 +185,8 @@ impl TestService for TestServiceImpl {
             .test_repository
             .save_test_answers(test_id, quiz_question_id, payloads.save_test_answers)
             .await
-            .map_err(|e| {
+            .inspect_err(|e| {
                 error!("{}", e.to_string());
-                e
             })?;
         debug!("updated test result {:?}", updated_test_result);
 
@@ -223,21 +218,6 @@ impl TestService for TestServiceImpl {
             return Err(Error::TestEnded);
         }
 
-        let updated_test = self
-            .test_repository
-            .update_one(
-                caller_id,
-                test_id,
-                UpdateTest {
-                    submitted_at: Some(Utc::now().naive_utc()),
-                    status: Some(StatusEnum::Submitted),
-                    ..Default::default()
-                },
-            )
-            .await?
-            .unwrap();
-        debug!("updated test {:?}", updated_test);
-
         let quiz_qnas = self
             .quiz_question_service
             .get_all(caller_id, test.quiz_id)
@@ -248,6 +228,8 @@ impl TestService for TestServiceImpl {
         // - Nếu là trắc nghiệm: so sánh 2 list có bằng nhau hay không
         // - Nếu là câu trả lời tự viết: todo
         let mut results = Vec::new();
+        let mut total_score = 0;
+
         for quiz_qna in quiz_qnas.into_iter() {
             if quiz_qna.question.r#type != QuestionTypeEnum::TextFill {
                 let correct_answer_ids = quiz_qna
@@ -268,6 +250,19 @@ impl TestService for TestServiceImpl {
                     quiz_qna.question.id,
                     correct_answer_ids == selected_answer_ids,
                 ));
+                if correct_answer_ids == selected_answer_ids {
+                    total_score += quiz_qna.question.point;
+                }
+            } else {
+                // todo: implement check text fill
+                let answers = self
+                    .test_repository
+                    .get_test_answers(test_id, quiz_qna.question.id)
+                    .await?;
+                if answers.len() == 1 {
+                    results.push((quiz_qna.question.id, true));
+                    total_score += quiz_qna.question.point;
+                }
             }
         }
 
@@ -276,282 +271,88 @@ impl TestService for TestServiceImpl {
             .update_test_question_results(test_id, results)
             .await?;
 
+        let updated_test = self
+            .test_repository
+            .update_one(
+                caller_id,
+                test_id,
+                UpdateTest {
+                    submitted_at: Some(Utc::now().naive_utc()),
+                    status: Some(StatusEnum::Submitted),
+                    score: Some(total_score),
+                    ..Default::default()
+                },
+            )
+            .await?
+            .unwrap();
+        debug!("updated test {:?}", updated_test);
+
         Ok(updated_test_question_results)
     }
 
-    async fn result(&self, caller_id: Uuid, test_id: Uuid) -> Result<()> {}
+    async fn result(&self, caller_id: Uuid, test_id: Uuid) -> Result<ResultResponse> {
+        let test = self.test_repository.get_by_id(caller_id, test_id).await?;
+        if test.status != StatusEnum::Submitted && test.status != StatusEnum::Abandoned {
+            return Err(Error::TestNotEnd);
+        }
+
+        let test_result = self
+            .test_repository
+            .get_all_test_question_result(test.id)
+            .await?;
+
+        Ok(ResultResponse {
+            test,
+            result: test_result,
+        })
+    }
 
     async fn review_solution(
         &self,
         caller_id: Uuid,
         test_id: Uuid,
-        question_id: Uuid,
-    ) -> Result<()>;
+        quiz_question_id: Uuid,
+    ) -> Result<SolutionResponse> {
+        let test = self.test_repository.get_by_id(caller_id, test_id).await?;
 
-    // async fn get_all(
-    //     &self,
-    //     caller_id: Uuid,
-    //     params: QueryTestParams,
-    // ) -> Result<PaginatedResponse<TestResponse>> {
-    //     let PaginatedResponse {
-    //         total_pages,
-    //         current_page,
-    //         page_size,
-    //         data,
-    //     } = self.test_repository.get_all(caller_id, params).await?;
+        if test.status != StatusEnum::Submitted && test.status != StatusEnum::Abandoned {
+            return Err(Error::TestNotEnd);
+        }
 
-    //     let mut res = Vec::<TestResponse>::new();
+        let test_result = self
+            .test_repository
+            .get_test_question_result(test_id, quiz_question_id)
+            .await?;
+        let test_answers = self
+            .test_repository
+            .get_test_answers(test_id, quiz_question_id)
+            .await?;
 
-    //     for (test, test_state) in data.into_iter() {
-    //         let status = check_test_status(test.started_at, test.submitted_at);
+        let mut selected_answer_ids = Vec::new();
+        let mut text_answer = None::<String>;
+        let mut spent_time = 0;
 
-    //         let quiz = self.quiz_service.get_by_id(test.quiz_id).await?;
-    //         let set = self.set_service.get_by_id(quiz.set_id).await?;
+        for answer in test_answers.into_iter() {
+            if let Some(value) = answer.selected_answer_id {
+                selected_answer_ids.push(value);
+            }
+            if let Some(value) = answer.text_answer {
+                text_answer = Some(value);
+            }
+            spent_time = answer.spent_time;
+        }
 
-    //         let test_info = TestResponse {
-    //             id: test.id,
-    //             quiz: TestingQuiz {
-    //                 id: quiz.id,
-    //                 name: quiz.name,
-    //                 set_id: set.id,
-    //                 set_name: set.name,
-    //             },
-    //             status,
-    //             score: test.score,
-    //             created_at: test.created_at,
-    //             started_at: test.started_at,
-    //             submitted_at: test.submitted_at,
-    //             max_duration: test.duration,
-    //             remaining_time: test_state.remaining_time,
-    //             current_state: None,
-    //         };
+        let quiz_qna = self
+            .quiz_question_service
+            .get_by_id(caller_id, test.quiz_id, quiz_question_id)
+            .await?;
 
-    //         res.push(test_info);
-    //     }
-
-    //     Ok(PaginatedResponse {
-    //         total_pages,
-    //         current_page,
-    //         page_size,
-    //         data: res,
-    //     })
-    // }
-
-    // async fn get_by_id(&self, caller_id: Uuid, test_id: Uuid) ->
-    // Result<TestResponse> {     let (test, test_state) =
-    // self.test_repository.get_one(test_id).await?;     let quiz =
-    // self.quiz_service.get_by_id(caller_id, test.quiz_id).await?;     let set
-    // = self.set_service.get_by_id(quiz.set_id).await?;
-
-    //     let status = check_test_status(test.started_at, test.submitted_at);
-
-    //     Ok(TestResponse {
-    //         id: test.id,
-    //         quiz: TestingQuiz {
-    //             id: quiz.id,
-    //             name: quiz.name,
-    //             set_id: set.id,
-    //             set_name: set.name,
-    //         },
-    //         status,
-    //         score: test.score,
-    //         created_at: test.created_at,
-    //         started_at: test.started_at,
-    //         submitted_at: test.submitted_at,
-    //         max_duration: test.duration,
-    //         remaining_time: test_state.remaining_time,
-    //         current_state: Some(CurrentTestState {
-    //             current_question_id: test_state.current_quiz_question,
-    //             completed_questions: test_state.completed_questions,
-    //             spent_time_in_second: test.duration - test_state.remaining_time,
-    //         }),
-    //     })
-    // }
-
-    // async fn create(&self, caller_id: Uuid, payload: CreateTest) ->
-    // Result<CreateTestResponse> {     // tạo 1 đối tượng Test với quiz_id và
-    // duration     let test = self
-    //         .test_repository
-    //         .create_one(payload.quiz_id, payload.max_duration)
-    //         .await?;
-
-    //     // lấy quiz và set để trả về cho response
-    //     let quiz = self.quiz_service.get_by_id(caller_id, test.quiz_id).await?;
-    //     let set = self.set_service.get_by_id(quiz.set_id).await?;
-
-    //     Ok(CreateTestResponse {
-    //         id: test.id,
-    //         max_duration: test.duration,
-    //         quiz: TestingQuiz {
-    //             id: quiz.id,
-    //             name: quiz.name,
-    //             set_id: set.id,
-    //             set_name: set.name,
-    //         },
-    //         status: "Not Started".into(),
-    //         created_at: test.created_at,
-    //     })
-    // }
-
-    // async fn start(&self, test_id: Uuid) -> Result<TestingQuestion> {
-    //     let now = chrono::Utc::now().naive_utc();
-
-    //     // Lấy test và test-state để làm
-    //     let (test, test_state) = self.test_repository.get_one(test_id).await?;
-
-    //     // Nếu test chưa được bắt đầu thì cập nhật trạng thái thành started
-    //     if test.started_at.is_none() {
-    //         // update state to started
-    //         self.test_repository
-    //             .update_one(
-    //                 test_id,
-    //                 UpdateTestParams {
-    //                     started_at: Some(now),
-    //                     submitted_at: None,
-    //                     current_testing_quiz_question: None,
-    //                     resolved_count: None,
-    //                     remaining_time: None,
-    //                 },
-    //             )
-    //             .await?;
-    //     }
-
-    //     // lấy câu hỏi quiz hiện tại trong test_state
-    //     let QuizQuestionResponse {
-    //         question: quiz_question,
-    //         answers: quiz_question_answers,
-    //     } = self
-    //         .quiz_question_service
-    //         .get_by_id(test_state.current_quiz_question, test.quiz_id)
-    //         .await?;
-
-    //     // lấy câu trả lời của quiz ở trên nếu có => để trả về cho FE show kết
-    // quả user     // đã làm
-    //     let testing_question_result = self
-    //         .test_repository
-    //         .get_test_question_result(test.id, quiz_question.id)
-    //         .await?;
-    //     let (text_answer, selected_answer_ids, spent_time_in_second) =
-    //         if let Some(test_question_result) = testing_question_result {
-    //             (
-    //                 test_question_result.text_answer,
-    //                 test_question_result.selected_answer_ids,
-    //                 test_question_result.spent_time,
-    //             )
-    //         } else {
-    //             (None, None, 0)
-    //         };
-
-    //     Ok(TestingQuestion {
-    //         id: quiz_question.id,
-    //         content: quiz_question.question_content,
-    //         answers: quiz_question_answers
-    //             .into_iter()
-    //             .map(|a| a.into())
-    //             .collect::<Vec<TestingAnswer>>(),
-    //         r#type: quiz_question.r#type,
-    //         selected_answer_ids,
-    //         spent_time_in_second,
-    //         text_answer,
-    //         next_question_id: quiz_question.next_question,
-    //         previous_question_id: quiz_question.previous_question,
-    //     })
-    // }
-
-    // async fn get_test_question(&self, test_id: Uuid, question_id: Uuid) ->
-    // Result<TestingQuestion> {     let (test, _) =
-    // self.test_repository.get_one(test_id).await?;
-    //     let QuizQuestionResponse {
-    //         question: quiz_question,
-    //         answers: quiz_question_answers,
-    //     } = self
-    //         .quiz_question_service
-    //         .get_by_id(question_id, test.quiz_id)
-    //         .await?;
-    //     let test_question_result = self
-    //         .test_repository
-    //         .get_test_question_result(test.id, quiz_question.id)
-    //         .await?;
-    //     let (text_answer, selected_answer_ids, spent_time_in_second) =
-    //         if let Some(test_question_result) = test_question_result {
-    //             (
-    //                 test_question_result.text_answer,
-    //                 test_question_result.selected_answer_ids,
-    //                 test_question_result.spent_time,
-    //             )
-    //         } else {
-    //             (None, None, 0)
-    //         };
-
-    //     Ok(TestingQuestion {
-    //         id: quiz_question.id,
-    //         content: quiz_question.question_content,
-    //         answers: quiz_question_answers
-    //             .into_iter()
-    //             .map(|a| a.into())
-    //             .collect::<Vec<TestingAnswer>>(),
-    //         r#type: quiz_question.r#type,
-    //         selected_answer_ids,
-    //         spent_time_in_second,
-    //         text_answer,
-    //         next_question_id: quiz_question.next_question,
-    //         previous_question_id: quiz_question.previous_question,
-    //     })
-    // }
-
-    // // Khi ấn next/previous/chọn câu bất kỳ/thoát => chương trình lưu lại câu trả
-    // // lời vào test_result và ghi lại câu quiz đang làm vào test_state
-    // async fn resolve_test_question(
-    //     &self,
-    //     test_id: Uuid,
-    //     question_id: Uuid,
-    //     payload: ResolveTestingQuestion,
-    // ) -> Result<()> {
-    //     let remaining_time = payload.remainning_time;
-
-    //     // Answer: create test_question_result ->
-    //     let resolved_count = self
-    //         .test_repository
-    //         .create_test_question_result(test_id, question_id, payload)
-    //         .await?;
-
-    //     let (test, _) = self
-    //         .test_repository
-    //         .update_one(
-    //             test_id,
-    //             UpdateTestParams {
-    //                 started_at: None,
-    //                 submitted_at: None,
-    //                 current_testing_quiz_question: Some(question_id),
-    //                 resolved_count: Some(resolved_count),
-    //                 remaining_time: Some(remaining_time),
-    //             },
-    //         )
-    //         .await?;
-
-    //     let QuizQuestionResponse {
-    //         question,
-    //         answers: _,
-    //     } = self
-    //         .quiz_question_service
-    //         .get_by_id(question_id, test.quiz_id)
-    //         .await?;
-
-    //     // TODO next
-
-    //     Ok(())
-    // }
-
-    // // Nhấn nút submit => chương trình chấm điểm các test result
-    // async fn submit(&self, test_id: Uuid) -> Result<()> {
-    //     Ok(())
-    // }
-
-    // async fn result(&self, test_id: Uuid) -> Result<()> {
-    //     Ok(())
-    // }
-
-    // async fn review_solution(&self, test_id: Uuid, question_id: Uuid) ->
-    // Result<()> {     Ok(())
-    // }
+        Ok(SolutionResponse {
+            solution: quiz_qna,
+            text_answer,
+            selected_answer_ids,
+            is_correct: test_result.is_correct,
+            spent_time,
+        })
+    }
 }
