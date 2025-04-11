@@ -27,6 +27,13 @@ pub trait QnAService: Sync + Send {
     // Get a question with all answers
     async fn get_by_id(&self, caller_id: Uuid, qna_id: Uuid) -> Result<questions::Model>;
 
+    // Get many
+    async fn get_by_many_ids(
+        &self,
+        caller_id: Uuid,
+        qna_ids: Vec<Uuid>,
+    ) -> Result<Vec<questions::Model>>;
+
     // Get all questions according to the given params with pagination
     async fn get_all_of_set(
         &self,

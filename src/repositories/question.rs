@@ -7,7 +7,8 @@ use {
     },
     chrono::Utc,
     sea_orm::{
-        ActiveModelTrait, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, Set,
+        ActiveModelTrait, ColumnTrait, Condition, EntityTrait, PaginatorTrait, QueryFilter,
+        QueryOrder, Set,
     },
     std::sync::Arc,
     uuid::Uuid,
@@ -54,6 +55,20 @@ impl QnARepository {
             .await
             .map_err(Error::QueryFailed)?
             .ok_or(Error::RecordNotFound)
+    }
+
+    pub async fn get_by_ids(&self, question_ids: Vec<Uuid>) -> Result<Vec<questions::Model>> {
+        let conn = self.db.get_connection().await;
+
+        Questions::find()
+            .filter(
+                Condition::all()
+                    .add(questions::Column::IsDeleted.eq(false))
+                    .add(questions::Column::Id.is_in(question_ids)),
+            )
+            .all(&conn)
+            .await
+            .map_err(Error::QueryFailed)
     }
 
     pub async fn get_all(

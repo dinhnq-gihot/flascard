@@ -1,6 +1,6 @@
 use {
     crate::entities::{
-        quiz_question_answers, quiz_questions, sea_orm_active_enums::QuestionTypeEnum,
+        questions, quiz_question_answers, quiz_questions, sea_orm_active_enums::QuestionTypeEnum,
     },
     serde::{Deserialize, Serialize},
     uuid::Uuid,
@@ -12,6 +12,15 @@ pub struct CreateQuizQuestionAnswer {
     pub is_answer: bool,
 }
 
+impl From<quiz_question_answers::Model> for CreateQuizQuestionAnswer {
+    fn from(value: quiz_question_answers::Model) -> Self {
+        Self {
+            content: value.content,
+            is_answer: value.is_answer,
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct CreateQuizQuestionRequest {
     pub question_content: String,
@@ -21,6 +30,29 @@ pub struct CreateQuizQuestionRequest {
     pub point: i32,
     pub index: i32,
     pub explaination: Option<String>,
+}
+
+impl From<questions::Model> for CreateQuizQuestionRequest {
+    fn from(value: questions::Model) -> Self {
+        let answers =
+            serde_json::from_value::<Vec<CreateQuizQuestionAnswer>>(value.answers).unwrap();
+
+        Self {
+            question_content: value.content,
+            answers,
+            r#type: value.r#type,
+            sample_id: Some(value.id),
+            point: 0,
+            index: -1,
+            explaination: None,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateQuizQuestionFromQuestion {
+    pub quiz_id: Uuid,
+    pub question_ids: Vec<Uuid>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

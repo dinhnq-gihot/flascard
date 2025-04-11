@@ -2,7 +2,8 @@ use {
     crate::{
         enums::error::*,
         models::quiz_question::{
-            CreateQuizQuestionRequest, QuizQuestionResponse, UpdateQuizQuestionRequest,
+            CreateQuizQuestionFromQuestion, CreateQuizQuestionRequest, QuizQuestionResponse,
+            UpdateQuizQuestionRequest,
         },
     },
     async_trait::async_trait,
@@ -14,8 +15,14 @@ pub trait QuizQuestionService: Sync + Send {
     async fn create(
         &self,
         caller_id: Uuid,
-        quiz_question_id: Uuid,
+        quiz_id: Uuid,
         payloads: Vec<CreateQuizQuestionRequest>,
+    ) -> Result<Vec<QuizQuestionResponse>>;
+
+    async fn create_from_question(
+        &self,
+        caller_id: Uuid,
+        payload: CreateQuizQuestionFromQuestion,
     ) -> Result<Vec<QuizQuestionResponse>>;
 
     async fn update(

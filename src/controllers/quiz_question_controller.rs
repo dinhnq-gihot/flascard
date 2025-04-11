@@ -1,7 +1,9 @@
 use {
     crate::{
         enums::{error::*, generic::into_ok_response},
-        models::quiz_question::{CreateQuizQuestionRequest, UpdateQuizQuestionRequest},
+        models::quiz_question::{
+            CreateQuizQuestionFromQuestion, CreateQuizQuestionRequest, UpdateQuizQuestionRequest,
+        },
         server::AppState,
         utils::jwt::Claims,
     },
@@ -25,6 +27,17 @@ impl QuizQuestionController {
     ) -> Result<impl IntoResponse> {
         let service = Arc::clone(&state.quiz_question_service);
         let res = service.create(caller.id, quiz_id, payloads).await?;
+
+        Ok(into_ok_response("Created successfully".into(), Some(res)))
+    }
+
+    pub async fn create_from_questions(
+        State(state): State<AppState>,
+        Extension(caller): Extension<Claims>,
+        Json(payload): Json<CreateQuizQuestionFromQuestion>,
+    ) -> Result<impl IntoResponse> {
+        let service = Arc::clone(&state.quiz_question_service);
+        let res = service.create_from_question(caller.id, payload).await?;
 
         Ok(into_ok_response("Created successfully".into(), Some(res)))
     }

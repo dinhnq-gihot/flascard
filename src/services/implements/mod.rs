@@ -47,6 +47,7 @@ pub async fn init_service_implements(db: Arc<Database>) -> ServiceImpls {
     let quiz_question_service = Arc::new(QuizQuestionServiceImpl::new(
         Arc::new(QuizQuestionRepository::new(Arc::clone(&db))),
         quiz_service.clone(),
+        qna_service.clone(),
     ));
     let test_service = Arc::new(TestServiceImpl::new(
         Arc::new(TestRepository::new(Arc::clone(&db))),

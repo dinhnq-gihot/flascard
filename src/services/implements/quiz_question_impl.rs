@@ -5,12 +5,15 @@ use {
         models::{
             quiz::{QuestionCounts, UpdateQuizRequest},
             quiz_question::{
-                CreateQuizQuestionRequest, QuizQuestionResponse, UpdateQuizQuestionRequest,
+                CreateQuizQuestionFromQuestion, CreateQuizQuestionRequest, QuizQuestionResponse,
+                UpdateQuizQuestionRequest,
             },
         },
         repositories::quiz_question::QuizQuestionRepository,
-        services::traits::{quiz_question_trait::QuizQuestionService, quiz_trait::QuizService},
-        utils::validator::validate_answer,
+        services::traits::{
+            prelude::QnAService, quiz_question_trait::QuizQuestionService, quiz_trait::QuizService,
+        },
+        utils::{helpers::total_question_count, validator::validate_answer},
     },
     async_trait::async_trait,
     std::sync::Arc,
@@ -20,16 +23,19 @@ use {
 pub struct QuizQuestionServiceImpl {
     quiz_question_repository: Arc<QuizQuestionRepository>,
     quiz_service: Arc<dyn QuizService>,
+    qna_service: Arc<dyn QnAService>,
 }
 
 impl QuizQuestionServiceImpl {
     pub fn new(
         quiz_question_repository: Arc<QuizQuestionRepository>,
         quiz_service: Arc<dyn QuizService>,
+        qna_service: Arc<dyn QnAService>,
     ) -> Self {
         Self {
             quiz_question_repository,
             quiz_service,
+            qna_service,
         }
     }
 }
@@ -93,6 +99,57 @@ impl QuizQuestionService for QuizQuestionServiceImpl {
                 },
             )
             .await?;
+
+        Ok(res)
+    }
+
+    async fn create_from_question(
+        &self,
+        caller_id: Uuid,
+        payload: CreateQuizQuestionFromQuestion,
+    ) -> Result<Vec<QuizQuestionResponse>> {
+        let CreateQuizQuestionFromQuestion {
+            quiz_id,
+            question_ids,
+        } = payload;
+
+        let quiz = self.quiz_service.get_by_id(caller_id, quiz_id).await?;
+        if quiz.creator_id != caller_id {
+            return Err(Error::PermissionDenied);
+        }
+        if quiz.is_published {
+            return Err(Error::PermissionDenied);
+        }
+
+        let question_counts = serde_json::from_value::<QuestionCounts>(quiz.question_counts)
+            .map_err(|e| Error::Anyhow(e.into()))?;
+        let mut quiz_question_counts_number = total_question_count(question_counts);
+
+        let creating_questions = self
+            .qna_service
+            .get_by_many_ids(caller_id, question_ids)
+            .await?
+            .into_iter()
+            .map(|question| {
+                let mut creating_quiz_question: CreateQuizQuestionRequest = question.into();
+                creating_quiz_question.index = quiz_question_counts_number;
+                quiz_question_counts_number += 1;
+                creating_quiz_question
+            })
+            .collect::<Vec<CreateQuizQuestionRequest>>();
+
+        let res = self
+            .quiz_question_repository
+            .create_many(quiz_id, creating_questions)
+            .await?
+            .into_iter()
+            .map(|r| {
+                QuizQuestionResponse {
+                    question: r.0,
+                    answers: r.1,
+                }
+            })
+            .collect::<Vec<_>>();
 
         Ok(res)
     }

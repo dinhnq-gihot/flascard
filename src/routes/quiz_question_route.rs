@@ -22,6 +22,10 @@ pub fn quiz_question_router(state: &AppState) -> Router {
             "/{quiz_id}/questions/{quiz_question_id}",
             get(QuizQuestionController::get_by_id).delete(QuizQuestionController::delete),
         )
+        .route(
+            "/create-from-questions",
+            post(QuizQuestionController::create_from_questions),
+        )
         .layer(middleware::from_fn(check_jwt))
         .with_state(state.clone())
 }

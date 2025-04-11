@@ -59,11 +59,14 @@ impl QnAService for QnAServiceImpl {
     ) -> Result<Option<questions::Model>> {
         let set_id = self.qna_repository.get_by_id(qna_id).await?.set_id;
 
+        // creator của question
         let is_creator_of_qna = self
             .qna_repository
             .is_creator_of_question(qna_id, caller_id)
             .await?;
+        //creator của set
         let is_creator_of_set = self.set_service.is_creator(set_id, caller_id).await?;
+        // được share set với edit permission
         let is_shared_in_edit_permission = self
             .set_service
             .check_share_permission(set_id, caller_id, SharedPermission::Edit)
@@ -96,16 +99,36 @@ impl QnAService for QnAServiceImpl {
     async fn get_by_id(&self, caller_id: Uuid, qna_id: Uuid) -> Result<questions::Model> {
         let res = self.qna_repository.get_by_id(qna_id).await?;
 
-        let set = self.set_service.get_by_id(caller_id, res.set_id).await;
-        let is_creator_of_qna = self
-            .qna_repository
-            .is_creator_of_question(qna_id, caller_id)
-            .await?;
+        let is_existing_set = self
+            .set_service
+            .get_by_id(caller_id, res.set_id)
+            .await
+            .is_ok();
 
-        if set.is_ok() || is_creator_of_qna {
+        if is_existing_set {
             return Ok(res);
         }
         Err(Error::AccessDenied)
+    }
+
+    async fn get_by_many_ids(
+        &self,
+        caller_id: Uuid,
+        qna_ids: Vec<Uuid>,
+    ) -> Result<Vec<questions::Model>> {
+        let res = self.qna_repository.get_by_ids(qna_ids).await?;
+
+        for qna in res.iter() {
+            let is_existing_set = self
+                .set_service
+                .get_by_id(caller_id, qna.set_id)
+                .await
+                .is_ok();
+            if !is_existing_set {
+                return Err(Error::AccessDenied);
+            }
+        }
+        return Ok(res);
     }
 
     async fn get_all_of_set(
